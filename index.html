@@ -1,65 +1,46 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Export Tracker Extension</title>
-  <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
+  <title>Export Tracker (Google Form)</title>
   <style>
     body {
       font-family: sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin-top: 50px;
     }
     button {
-      padding: 12px 24px;
+      padding: 10px 20px;
       font-size: 16px;
-      border: none;
-      background-color: #007ac2;
+      background-color: #0059b3;
       color: white;
-      border-radius: 4px;
+      border: none;
+      border-radius: 6px;
       cursor: pointer;
     }
     button:hover {
-      background-color: #005fa3;
+      background-color: #004080;
     }
   </style>
 </head>
 <body>
-  <h2>📤 Export All with Tracking</h2>
-  <button id="exportBtn">Download Export</button>
+  <h2>Export All with Tracking</h2>
+  <button id="exportBtn">Export and Track</button>
 
   <script>
-    const webhookUrl = "https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec";  // <-- Replace this
-
     document.getElementById("exportBtn").addEventListener("click", async () => {
-      try {
-        console.log("🔁 Button clicked, initializing Tableau...");
-        await tableau.extensions.initializeAsync();
+      console.log("📤 Opening Google Form to log export");
 
-        const dashboardName = tableau.extensions.dashboardContent.dashboard.name;
-        const username = tableau.extensions.environment.username || "unknown";
-        const timestamp = new Date().toISOString();
+      // Replace with your actual Google Form prefill URL
+      const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfq9n6z0yzRmVLjA3pPKCRZYa5SqpC2r9txG1U30bMN0zF96Q/viewform";
 
-        console.log("📤 Sending webhook:", { username, dashboardName, timestamp });
+      // Optional: Add query string with prefill values if needed
+      // const prefilled = formUrl + "?entry.123456=username&entry.7891011=dashboardname";
 
-        const res = await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ username, dashboardName, timestamp })
-        });
-
-        if (!res.ok) {
-          throw new Error("Webhook failed: " + res.statusText);
-        }
-
-        console.log("✅ Webhook sent successfully");
-        
-        // Optional: open the Tableau export page or external view
-        window.open("https://eu-west-1a.online.tableau.com/t/easyfairs/views/60sFeedbackEXPORTTRIAL/60sFeedbackDashboard?:origin=card_share_link&:embed=n", "_blank");  // <-- Replace this
-
-      } catch (err) {
-        console.error("❌ Initialization or webhook failed:", err);
-      }
+      window.open(formUrl, "_blank");
     });
   </script>
 </body>
