@@ -1,46 +1,23 @@
-
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Export Tracker (Google Form)</title>
+  <meta charset="utf-8" />
+  <title>Export Tracker</title>
   <style>
-    body {
-      font-family: sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      margin-top: 50px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      background-color: #0059b3;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #004080;
-    }
+    body { font-family: sans-serif; text-align: center; padding: 2em; }
+    button { font-size: 1.2em; padding: 0.8em 1.2em; }
   </style>
+  <script type="text/javascript" src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
 </head>
 <body>
-  <h2>Export All with Tracking</h2>
+  <h2>Export Tracker Extension</h2>
+  <p>This button will open the export tracking form.</p>
   <button id="exportBtn">Export and Track</button>
 
   <script>
     document.getElementById("exportBtn").addEventListener("click", async () => {
-      console.log("📤 Opening Google Form to log export");
-
-      // Replace with your actual Google Form prefill URL
-      const formUrl = "https://docs.google.com/forms/d/e/1FAIpQLSfq9n6z0yzRmVLjA3pPKCRZYa5SqpC2r9txG1U30bMN0zF96Q/viewform";
-
-      // Optional: Add query string with prefill values if needed
-      // const prefilled = formUrl + "?entry.123456=username&entry.7891011=dashboardname";
-
-      window.open(formUrl, "_blank");
+      console.log("🔁 Button clicked, opening Google Form...");
+      window.open("https://docs.google.com/forms/d/e/1FAIpQLSfKoVyw607IAA__876CrF8LomNri7sgaZ7Po-3H46jpICruDQ/viewform?usp=header", "_blank");
     });
   </script>
 </body>

@@ -3,7 +3,7 @@
   <dashboard-extension id="com.easyfairs.exportall.formtracker" extension-version="1.0.0">
     <default-locale>en_US</default-locale>
     <name resource-id="name"/>
-    <description>Export All Tracker via Google Form</description>
+    <description>Opens a Google Form for tracking exports</description>
     <author name="Gert Verbeken" email="gert.verbeken@easyfairs.com" organization="Easyfairs" website="https://gertverbeken-pixel.github.io"/>
     <min-api-version>1.0</min-api-version>
     <source-location>
@@ -13,7 +13,7 @@
   </dashboard-extension>
   <resources>
     <resource id="name">
-      <text locale="en_US">Export All Form Tracker</text>
+      <text locale="en_US">Export Form Tracker</text>
     </resource>
   </resources>
 </manifest>
