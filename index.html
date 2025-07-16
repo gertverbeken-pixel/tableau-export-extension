@@ -1,14 +1,59 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Export All with Tracking</title>
-    <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
-    <link rel="stylesheet" href="export.css" />
-  </head>
-  <body>
-    <h1>📊 Export All + Tracker</h1>
-    <button id="exportBtn">Export & Log</button>
-    <script src="extension.js"></script>
-  </body>
+<head>
+  <title>Export Tracker</title>
+  <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #1f77b4;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <button id="downloadBtn">📦 Download All</button>
+
+  <script>
+    const webhookUrl = 'https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec';
+    const exportUrl = 'https://yourdomain.tableau.com/views/YourExportView?:showVizHome=no';
+
+    document.getElementById("downloadBtn").addEventListener("click", async () => {
+      console.log("🔁 Button clicked, initializing Tableau...");
+      try {
+        await tableau.extensions.initializeAsync();
+
+        const dashboard = tableau.extensions.dashboardContent.dashboard;
+        const username = tableau.extensions.environment.username;
+        const dashboardName = dashboard.name;
+
+        const payload = {
+          username,
+          dashboardName,
+          timestamp: new Date().toISOString()
+        };
+
+        console.log("📤 Sending webhook:", payload);
+        await fetch(webhookUrl, {
+          method: 'POST',
+          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        console.log("✅ Webhook sent. Redirecting to export...");
+        window.open(exportUrl, '_blank');
+      } catch (err) {
+        console.error("❌ Initialization or webhook failed:", err);
+        alert("Something went wrong. Check the console for details.");
+      }
+    });
+  </script>
+</body>
 </html>
