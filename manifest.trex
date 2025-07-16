@@ -4,15 +4,16 @@
     <default-locale>en_US</default-locale>
     <name resource-id="name"/>
     <description>Simple Export Button with Webhook Tracking</description>
-    <author name="Gert Verbeken" email="gert.verbeken@easyfairs.com" organization="Easyfairs"/>
+    <author 
+  name="Gert Verbeken" 
+  email="gert.verbeken@easyfairs.com" 
+  organization="Easyfairs" 
+  website="https://github.com/gertverbeken-pixel"/>
     <min-api-version>1.0</min-api-version>
     <source-location>
-      <url>http://localhost:8080/index.html</url>
+      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/</url>
     </source-location>
     <icon>iVBORw0KGgoAAAANSUhEUgAAAMAAAADAAgMAAAAvsoSUAAAACVBMVEUAAAAAAAAAAACDY+nAAAAAA3RSTlMA/4CE6rqMAAAAoUlEQVR4Ae3PoRUCMQDAUN65DnIj9R6SUViCfcFGpXXwSHzEv1VV/UbzU0NDQ8NqDQ0NDQ0NDQ0NDQ2viS4dTg53HQaHhw4Hh+cmggRHkOAIEhxBgiNIcAQJjiDBESQ4ggRHkOAIEHYQJDiCBEeQ4AgSHEGCI0hwBAirCBIcQYIjSHAECd4AYQ1BgiNI8E4SvEGCd2wQqmpKDQ3/NFRVfUlvNddxSLdUkP4AAAAASUVORK5CYII=</icon>
-    <context-menu>
-      <configure-context-menu-item />
-    </context-menu>
   </dashboard-extension>
   <resources>
     <resource id="name">
