@@ -1,57 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Export Tracker</title>
+  <meta charset="UTF-8" />
+  <title>Export Tracker Extension</title>
   <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
   <style>
     body {
       font-family: sans-serif;
       padding: 20px;
+      background: #f9f9f9;
     }
     button {
-      padding: 10px 20px;
+      padding: 12px 24px;
       font-size: 16px;
-      background-color: #1f77b4;
-      color: white;
       border: none;
-      border-radius: 5px;
+      background-color: #007ac2;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #005fa3;
     }
   </style>
 </head>
 <body>
-  <button id="downloadBtn">📦 Download All</button>
+  <h2>📤 Export All with Tracking</h2>
+  <button id="exportBtn">Download Export</button>
 
   <script>
-    const webhookUrl = 'https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec';
-    const exportUrl = 'https://yourdomain.tableau.com/views/YourExportView?:showVizHome=no';
+    const webhookUrl = "https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec";  // <-- Replace this
 
-    document.getElementById("downloadBtn").addEventListener("click", async () => {
-      console.log("🔁 Button clicked, initializing Tableau...");
+    document.getElementById("exportBtn").addEventListener("click", async () => {
       try {
+        console.log("🔁 Button clicked, initializing Tableau...");
         await tableau.extensions.initializeAsync();
 
-        const dashboard = tableau.extensions.dashboardContent.dashboard;
-        const username = tableau.extensions.environment.username;
-        const dashboardName = dashboard.name;
+        const dashboardName = tableau.extensions.dashboardContent.dashboard.name;
+        const username = tableau.extensions.environment.username || "unknown";
+        const timestamp = new Date().toISOString();
 
-        const payload = {
-          username,
-          dashboardName,
-          timestamp: new Date().toISOString()
-        };
+        console.log("📤 Sending webhook:", { username, dashboardName, timestamp });
 
-        console.log("📤 Sending webhook:", payload);
-        await fetch(webhookUrl, {
-          method: 'POST',
-          body: JSON.stringify(payload),
-          headers: { 'Content-Type': 'application/json' }
+        const res = await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, dashboardName, timestamp })
         });
 
-        console.log("✅ Webhook sent. Redirecting to export...");
-        window.open(exportUrl, '_blank');
+        if (!res.ok) {
+          throw new Error("Webhook failed: " + res.statusText);
+        }
+
+        console.log("✅ Webhook sent successfully");
+        
+        // Optional: open the Tableau export page or external view
+        window.open("https://eu-west-1a.online.tableau.com/t/easyfairs/views/60sFeedbackEXPORTTRIAL/60sFeedbackDashboard?:origin=card_share_link&:embed=n", "_blank");  // <-- Replace this
+
       } catch (err) {
         console.error("❌ Initialization or webhook failed:", err);
-        alert("Something went wrong. Check the console for details.");
       }
     });
   </script>
