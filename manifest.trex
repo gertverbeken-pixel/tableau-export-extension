@@ -6,6 +6,9 @@
     <description>Export All Tracker</description>
     <author name="Gert Verbeken" email="gert.verbeken@easyfairs.com" organization="Easyfairs" website="https://gertverbeken-pixel.github.io"/>
     <min-api-version>1.0</min-api-version>
+<permissions>
+  <scope>UnderlyingData</scope>
+</permissions>
     <source-location>
       <url>https://gertverbeken-pixel.github.io/tableau-export-extension/</url>
     </source-location>
