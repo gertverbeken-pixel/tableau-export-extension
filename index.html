@@ -23,29 +23,23 @@
   <button id="exportBtn">Export & Track</button>
 
   <script>
-    // 1) Your Apps Script Web App URL:
     const exportBase = 'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
-
+  
     document.getElementById('exportBtn').addEventListener('click', async function() {
       try {
-        // 2) Init the Tableau Extensions API
         await tableau.extensions.initializeAsync();
-
-        // 3) Read dashboard + worksheet info
+  
         const dash = tableau.extensions.dashboardContent.dashboard;
         const user = tableau.extensions.environment.username || 'unknown';
+        const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard'; // your hard-coded viewId
         const dashboard = encodeURIComponent(dash.name);
-
-        // 4) Hard-code your viewId (the part after /views/ in your REST URL)
-        const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard';
-
-        // 5) Build the Web App URL
+  
         const url = exportBase
           + '?viewId='   + encodeURIComponent(viewId)
           + '&dashboard=' + dashboard
           + '&user='      + encodeURIComponent(user);
-
-        // 6) Open in new tab — the Apps Script page will auto-download
+  
+        //  ▶️ We DO NOT fetch JSON here: we simply open the URL
         window.open(url, '_blank');
       }
       catch(err) {
