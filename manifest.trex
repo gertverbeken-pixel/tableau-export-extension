@@ -14,13 +14,11 @@
     <source-location>
       <url>https://gertverbeken-pixel.github.io/tableau-export-extension/index.html</url>
     </source-location>
-    <!-- a tiny 1×1 transparent PNG as a valid icon -->
+    <!-- minimal 1×1 transparent PNG icon -->
     <icon>
-      iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMA
-      QObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=
+      iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=
     </icon>
   </dashboard-extension>
-
   <resources>
     <resource id="name">
       <text locale="en_US">Server-Backed Full CSV Export + Tracker</text>

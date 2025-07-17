@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8"/>
   <title>Full CSV Export + Tracker</title>
-  <!-- Tableau Extensions JS API -->
   <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 2em; }
@@ -24,31 +23,32 @@
   <button id="exportBtn">Export & Track</button>
 
   <script>
+    // 1) Your Apps Script Web App URL:
     const exportBase = 'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
-  
+
     document.getElementById('exportBtn').addEventListener('click', async function() {
       try {
+        // 2) Init the Tableau Extensions API
         await tableau.extensions.initializeAsync();
-  
+
+        // 3) Read dashboard + worksheet info
         const dash = tableau.extensions.dashboardContent.dashboard;
-        // const ws   = dash.worksheets[0];  // still can use for other info if needed
         const user = tableau.extensions.environment.username || 'unknown';
         const dashboard = encodeURIComponent(dash.name);
-        const ts = encodeURIComponent(new Date().toISOString());
-  
-        // *** Hard-coded viewId ***
+
+        // 4) Hard-code your viewId (the part after /views/ in your REST URL)
         const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard';
-  
-        // Build URL
+
+        // 5) Build the Web App URL
         const url = exportBase
           + '?viewId='   + encodeURIComponent(viewId)
           + '&dashboard=' + dashboard
-          + '&user='      + encodeURIComponent(user)
-          + '&ts='        + ts;
-  
+          + '&user='      + encodeURIComponent(user);
+
+        // 6) Open in new tab — the Apps Script page will auto-download
         window.open(url, '_blank');
       }
-      catch (err) {
+      catch(err) {
         console.error('❌ Export & Track failed:', err);
         alert('Export failed—see console for details.');
       }
