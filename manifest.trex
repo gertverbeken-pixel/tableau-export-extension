@@ -10,10 +10,10 @@
             email="gert.verbeken@easyfairs.com"
             organization="Easyfairs"
             website="https://gertverbeken-pixel.github.io"/>
-    <min-api-version>1.1</min-api-version>
-    <source-location>
-      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/</url>
-    </source-location>
+  <min-api-version>1.8</min-api-version>
+  <source-location>
+    <url>https://gertverbeken-pixel.github.io/tableau-export-extension/</url>
+  </source-location>
   </dashboard-extension>
   <resources>
     <resource id="name">
