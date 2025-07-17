@@ -24,35 +24,31 @@
   <button id="exportBtn">Export & Track</button>
 
   <script>
-    // Your Apps Script URL
     const exportBase = 'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
-
+  
     document.getElementById('exportBtn').addEventListener('click', async function() {
       try {
-        // 1. Initialize the Tableau Extensions API
         await tableau.extensions.initializeAsync();
-
-        // 2. Gather parameters
+  
         const dash = tableau.extensions.dashboardContent.dashboard;
-        const ws   = dash.worksheets[0];  // or find by name
-        const fullVizUrl = ws.getUrl();
-        // Extract viewId: the part after "/views/" before any "?"
-        const viewId = fullVizUrl.split('/views/')[1].split('?')[0];
-
+        // const ws   = dash.worksheets[0];  // still can use for other info if needed
         const user = tableau.extensions.environment.username || 'unknown';
         const dashboard = encodeURIComponent(dash.name);
-        const timestamp = encodeURIComponent(new Date().toISOString());
-
-        // 3. Build the full URL with query params
+        const ts = encodeURIComponent(new Date().toISOString());
+  
+        // *** Hard-coded viewId ***
+        const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard';
+  
+        // Build URL
         const url = exportBase
           + '?viewId='   + encodeURIComponent(viewId)
           + '&dashboard=' + dashboard
-          + '&user='      + encodeURIComponent(user);
-
-        // 4. Open the URL in a new tab — the Apps Script will handle the download
+          + '&user='      + encodeURIComponent(user)
+          + '&ts='        + ts;
+  
         window.open(url, '_blank');
-
-      } catch (err) {
+      }
+      catch (err) {
         console.error('❌ Export & Track failed:', err);
         alert('Export failed—see console for details.');
       }
