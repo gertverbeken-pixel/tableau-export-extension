@@ -14,44 +14,47 @@
   <button id="exportBtn">Export & Track</button>
   <script>
     const webhookUrl = 'https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec';
-    document.getElementById('exportBtn').addEventListener('click', async () => {
+    document.getElementById('exportBtn').addEventListener('click', async function() {
       try {
         await tableau.extensions.initializeAsync();
-        const dash = tableau.extensions.dashboardContent.dashboard;
-        const ws   = dash.worksheets[0];
-        const user = tableau.extensions.environment.username || 'unknown';
-        const name = dash.name;
-        const ts   = new Date().toISOString();
-
-        const reader = await ws.getUnderlyingTableDataReaderAsync({ pageRowCount: 10000 });
-        const cols = reader.getColumns().map(c => c.fieldName);
-        const rows = [];
+        var dash = tableau.extensions.dashboardContent.dashboard;
+        var ws = dash.worksheets[0];
+        var user = tableau.extensions.environment.username || 'unknown';
+        var name = dash.name;
+        var ts = new Date().toISOString();
+        var reader = await ws.getUnderlyingTableDataReaderAsync({ pageRowCount: 10000 });
+        var cols = reader.getColumns().map(function(c) { return c.fieldName; });
+        var rows = [];
         while (reader.hasNext()) {
-          const page = await reader.getNextPageAsync();
-          rows.push(...page.data);
+          var page = await reader.getNextPageAsync();
+          rows = rows.concat(page.data);
         }
-
-        let csv = cols.map(c => \`"\${c}"\`).join(',') + '\n';
-        rows.forEach(r => {
-          csv += r.map(cell => \`"\${cell.formattedValue.replace(/"/g,'""')}"\`).join(',') + '\n';
+        // Build CSV header
+        var csv = '"' + cols.join('","') + '"\n';
+        // Build CSV rows
+        rows.forEach(function(r) {
+          var vals = r.map(function(cell) {
+            return cell.formattedValue.replace(/"/g, '""');
+          });
+          csv += '"' + vals.join('","') + '"\n';
         });
-        csv += \`"TRACKER","\${user}","\${name}","\${ts}"\n\`;
-
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const link = document.createElement('a');
+        // Append tracker row
+        csv += '"TRACKER","' + user + '","' + name + '","' + ts + '"\n';
+        // Trigger download
+        var blob = new Blob([csv], { type: 'text/csv' });
+        var link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = \`\${name.replace(/\s+/g,'_')}_\${ts}.csv\`;
+        link.download = name.replace(/\s+/g, '_') + '_' + ts + '.csv';
         document.body.appendChild(link);
         link.click();
-        link.remove();
-
+        document.body.removeChild(link);
+        // Notify webhook
         await fetch(webhookUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user, dashboard: name, timestamp: ts })
+          body: JSON.stringify({ user: user, dashboard: name, timestamp: ts })
         });
-
-        console.log('✅ Full export, track & notify complete.');
+        console.log('✅ Export, track & notify complete.');
       } catch (e) {
         console.error('❌ Export failed:', e);
         alert('Export failed: ' + e.message);
