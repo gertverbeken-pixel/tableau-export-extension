@@ -1,64 +1,62 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8"/>
   <title>Full CSV Export + Tracker</title>
   <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 2em; }
+    button { font-size: 1.1em; padding: .8em 1.2em; }
+  </style>
 </head>
 <body>
-  <button id="exportBtn">Export Full CSV with Tracker</button>
+  <h2>Export Full CSV with Tracker</h2>
+  <button id="exportBtn">Export & Track</button>
   <script>
-    const webhookUrl = "https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec";
-
-    document.getElementById("exportBtn").onclick = async () => {
+    const webhookUrl = 'https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec';
+    document.getElementById('exportBtn').addEventListener('click', async () => {
       try {
         await tableau.extensions.initializeAsync();
         const dash = tableau.extensions.dashboardContent.dashboard;
-        const ws   = dash.worksheets[0];                   // or find by name
-        const user = tableau.extensions.environment.username || "unknown";
+        const ws   = dash.worksheets[0];
+        const user = tableau.extensions.environment.username || 'unknown';
         const name = dash.name;
         const ts   = new Date().toISOString();
 
-        // 1) Page through *all* underlying data
-        const reader = await ws.getUnderlyingTableDataReaderAsync();
-        const columns = reader.getColumns().map(c => c.fieldName);
+        const reader = await ws.getUnderlyingTableDataReaderAsync({ pageRowCount: 10000 });
+        const cols = reader.getColumns().map(c => c.fieldName);
         const rows = [];
         while (reader.hasNext()) {
           const page = await reader.getNextPageAsync();
           rows.push(...page.data);
         }
 
-        // 2) Build CSV
-        let csv = columns.join(",") + "\n";
+        let csv = cols.map(c => \`"\${c}"\`).join(',') + '\n';
         rows.forEach(r => {
-          csv += r.map(cell => `"${cell.formattedValue.replace(/"/g,'""')}"`).join(",") + "\n";
+          csv += r.map(cell => \`"\${cell.formattedValue.replace(/"/g,'""')}"\`).join(',') + '\n';
         });
-        // 3) Append tracker row
-        csv += `"TRACKER","${user}","${name}","${ts}"\n`;
+        csv += \`"TRACKER","\${user}","\${name}","\${ts}"\n\`;
 
-        // 4) Download
-        const blob = new Blob([csv], { type: "text/csv" });
-        const link = document.createElement("a");
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const link = document.createElement('a');
         link.href = URL.createObjectURL(blob);
-        link.download = `${name.replace(/\s+/g,'_')}_${ts}.csv`;
+        link.download = \`\${name.replace(/\s+/g,'_')}_\${ts}.csv\`;
         document.body.appendChild(link);
         link.click();
         link.remove();
 
-        // 5) Notify backend
         await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user, dashboard: name, timestamp: ts })
         });
 
-        console.log("✅ Full export, track & notify complete.");
+        console.log('✅ Full export, track & notify complete.');
+      } catch (e) {
+        console.error('❌ Export failed:', e);
+        alert('Export failed: ' + e.message);
       }
-      catch (err) {
-        console.error("❌ Export failed:", err);
-        alert("Export failed—see console.");
-      }
-    };
+    });
   </script>
 </body>
 </html>
