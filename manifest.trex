@@ -1,21 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest manifest-version="0.1"
           xmlns="http://www.tableau.com/xml/extension_manifest">
-  <dashboard-extension id="com.easyfairs.exportall.fulltracker"
-                       extension-version="1.0.0">
-    <default-locale>en_US</default-locale>
-    <name resource-id="name"/>
-    <description>Full CSV Export + Tracker</description>
-    <author name="Gert Verbeken"
-            email="gert.verbeken@easyfairs.com"
-            organization="Easyfairs"
-            website="https://gertverbeken-pixel.github.io"/>
-    <min-api-version>1.10</min-api-version>
-    <source-location>
-      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/</url>
-    </source-location>
-    <icon>iVBORw0KGgoAAAANSUhEUgAAAMAAAADAAgMAAAAvsoSUAAAACVBMVEUAAAAAAAAAAACDY+nAAAAAA3RSTlMA/4CE6rqMAAAAoUlEQVR4Ae3PoRUCMQDAUN65DnIj9R6SUViCfcFGpXXwSHzEv1VV/UbzU0NDQ8NqDQ0NDQ0NDQ0NDQ2viS4dTg53HQaHhw4Hh+cmggRHkOAIEhxBgiNIcAQJjiDBESQ4ggRHkOAIEHYQJDiCBEeQ4AgSHEGCI0hwBAirCBIcQYIjSHAECd4AYQ1BgiNI8E4SvEGCd2wQqmpKDQ3/NFRVfUlvNddxSLdUkP4AAAAASUVORK5CYII=</icon>
-  </dashboard-extension>
+<dashboard-extension id="com.easyfairs.exportall.servertracker" extension-version="1.0.0">
+  <default-locale>en_US</default-locale>
+  <name resource-id="name"/>
+  <description>Server-Backed Full CSV Export + Tracker</description>
+  <author name="Gert Verbeken" …/>
+  <min-api-version>1.0</min-api-version>
+  <source-location>
+    <url>https://gertverbeken-pixel.github.io/tableau-export-extension/</url>
+  </source-location>
+</dashboard-extension>
   <resources>
     <resource id="name">
       <text locale="en_US">Full CSV Export + Tracker</text>

@@ -3,72 +3,58 @@
 <head>
   <meta charset="utf-8"/>
   <title>Full CSV Export + Tracker</title>
+  <!-- Tableau Extensions JS API -->
   <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 2em; }
-    button { font-size: 1.1em; padding: .8em 1.2em; }
+    button {
+      font-size: 1.1em;
+      padding: .8em 1.2em;
+      background-color: #007ac2;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #005fa3; }
   </style>
 </head>
 <body>
   <h2>Export Full CSV with Tracker</h2>
   <button id="exportBtn">Export & Track</button>
-  <script>
-    const webhookUrl = 'https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec';
 
-    document.getElementById('exportBtn').addEventListener('click', async () => {
+  <script>
+    // Your Apps Script URL
+    const exportBase = 'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
+
+    document.getElementById('exportBtn').addEventListener('click', async function() {
       try {
+        // 1. Initialize the Tableau Extensions API
         await tableau.extensions.initializeAsync();
+
+        // 2. Gather parameters
         const dash = tableau.extensions.dashboardContent.dashboard;
         const ws   = dash.worksheets[0];  // or find by name
+        const fullVizUrl = ws.getUrl();
+        // Extract viewId: the part after "/views/" before any "?"
+        const viewId = fullVizUrl.split('/views/')[1].split('?')[0];
+
         const user = tableau.extensions.environment.username || 'unknown';
-        const name = dash.name;
-        const ts   = new Date().toISOString();
+        const dashboard = encodeURIComponent(dash.name);
+        const timestamp = encodeURIComponent(new Date().toISOString());
 
-        // 1) Identify the logical table used by this worksheet
-        const logicalTables = await ws.getUnderlyingTablesAsync();                      //  [oai_citation:0‡d45.github.io](https://d45.github.io/extensions-api/docs/trex_getdata.html)
-        const tableId       = logicalTables[0].id;
+        // 3. Build the full URL with query params
+        const url = exportBase
+          + '?viewId='   + encodeURIComponent(viewId)
+          + '&dashboard=' + dashboard
+          + '&user='      + encodeURIComponent(user);
 
-        // 2) Create a paged reader (10k rows per page)
-        const reader = await ws.getUnderlyingTableDataReaderAsync(tableId, {pageRowCount:10000});  //  [oai_citation:1‡d45.github.io](https://d45.github.io/extensions-api/docs/trex_getdata.html)
+        // 4. Open the URL in a new tab — the Apps Script will handle the download
+        window.open(url, '_blank');
 
-        // 3) Fetch every page into a single DataTable
-        const dataTable = await reader.getAllPagesAsync();                               //  [oai_citation:2‡help.tableau.com](https://help.tableau.com/current/api/embedding_api/en-us/reference/interfaces/datatablereader.html?utm_source=chatgpt.com)
-        await reader.releaseAsync();
-
-        // 4) Extract columns & rows
-        const cols = dataTable.columns.map(c => c.fieldName);
-        const rows = dataTable.data;      // each row is an array of DataValue objects
-
-        // 5) Build CSV text
-        let csv = '"' + cols.join('","') + '"\n';
-        rows.forEach(r => {
-          const vals = r.map(cell => cell.formattedValue.replace(/"/g, '""'));
-          csv += '"' + vals.join('","') + '"\n';
-        });
-        // 6) Append tracker row
-        csv += `"TRACKER","${user}","${name}","${ts}"\n`;
-
-        // 7) Trigger download
-        const blob = new Blob([csv], { type: 'text/csv' });
-        const a    = document.createElement('a');
-        a.href     = URL.createObjectURL(blob);
-        a.download = `${name.replace(/\s+/g,'_')}_${ts}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-
-        // 8) Notify backend
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user, dashboard: name, timestamp: ts })
-        });
-
-        console.log('✅ Full export, track & notify complete.');
-      }
-      catch (e) {
-        console.error('❌ Export failed:', e);
-        alert('Export failed: ' + e.message);
+      } catch (err) {
+        console.error('❌ Export & Track failed:', err);
+        alert('Export failed—see console for details.');
       }
     });
   </script>
