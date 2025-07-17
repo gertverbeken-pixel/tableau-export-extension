@@ -14,7 +14,11 @@
     <source-location>
       <url>https://gertverbeken-pixel.github.io/tableau-export-extension/index.html</url>
     </source-location>
-    <!-- icon removed -->
+    <!-- a tiny 1×1 transparent PNG as a valid icon -->
+    <icon>
+      iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMA
+      QObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=
+    </icon>
   </dashboard-extension>
 
   <resources>
