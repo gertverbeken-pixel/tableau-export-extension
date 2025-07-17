@@ -1,23 +1,64 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
+  <meta charset="UTF-8"/>
   <title>Export Tracker</title>
+  <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 2em; }
-    button { font-size: 1.2em; padding: 0.8em 1.2em; }
+    body { font-family:sans-serif; text-align:center; padding:2em; }
+    button { font-size:1.1em; padding:.8em 1.2em; }
   </style>
-  <script type="text/javascript" src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
 </head>
 <body>
-  <h2>Export Tracker Extension</h2>
-  <p>This button will open the export tracking form.</p>
-  <button id="exportBtn">Export and Track</button>
-
+  <h2>📥 Download Full Sheet (with Tracker)</h2>
+  <button id="exportBtn">Export & Track</button>
   <script>
+    const webhookUrl = "https://script.google.com/macros/s/AKfycbxrgR7BqnSoL01D-LzC_kBkqto579BRl9YBxJcYABhItWxvR-pbOCai6BJz2uCeewampw/exec";
     document.getElementById("exportBtn").addEventListener("click", async () => {
-      console.log("🔁 Button clicked, opening Google Form...");
-      window.open("https://docs.google.com/forms/d/e/1FAIpQLSfKoVyw607IAA__876CrF8LomNri7sgaZ7Po-3H46jpICruDQ/viewform?usp=header", "_blank");
+      try {
+        await tableau.extensions.initializeAsync();
+        const dash = tableau.extensions.dashboardContent.dashboard;
+        const ws   = dash.worksheets[0];  // or find by name
+        const user = tableau.extensions.environment.username || "unknown";
+        const dashName = dash.name;
+        const ts   = new Date().toISOString();
+
+        // 1) export all data
+        const fileObj = await ws.exportDataAsync({
+          maxRows: 0,                  // no limit
+          includeAllColumns:  true,    // full table
+          fileType: tableau.FileType.CSV
+        });
+
+        // 2) fetch the CSV
+        const resp = await fetch(fileObj.downloadUrl);
+        let text  = await resp.text();
+
+        // 3) append a tracker row
+        text += `\n"---TRACKER---","${user}","${dashName}","${ts}"\n`;
+
+        // 4) download the modified CSV
+        const blob = new Blob([text], { type: "text/csv" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `${dashName.replace(/\s+/g,"_")}_${ts}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+
+        // 5) notify yourself
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type":"application/json" },
+          body: JSON.stringify({ user, dashName, timestamp: ts })
+        });
+
+        console.log("✅ Export, track & notify done!");
+
+      } catch(err) {
+        console.error("❌ Export failed:", err);
+        alert("Export failed — check console.");
+      }
     });
   </script>
 </body>
