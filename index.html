@@ -40,7 +40,13 @@
           + '&user='      + encodeURIComponent(user);
   
         //  ▶️ We DO NOT fetch JSON here: we simply open the URL
-        window.open(url, '_blank');
+        window.open(
+  exportBase
+  + '?viewId='   + encodeURIComponent(viewId)
+  + '&dashboard=' + encodeURIComponent(dashboardName)
+  + '&user='      + encodeURIComponent(username),
+  '_blank'
+);
       }
       catch(err) {
         console.error('❌ Export & Track failed:', err);
