@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <title>Full CSV Export + Tracker</title>
+  <!-- Tableau Extensions API -->
   <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
   <style>
     body { font-family: sans-serif; text-align: center; padding: 2em; }
@@ -23,32 +24,35 @@
   <button id="exportBtn">Export & Track</button>
 
   <script>
-    const exportBase = 'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
-  
+    console.log('Export Tracker v6 loaded');
+
+    // Your Apps Script Web App URL:
+    const exportBase = 
+      'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
+
+    // Hard‐coded Tableau viewId:
+    const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard';
+
     document.getElementById('exportBtn').addEventListener('click', async function() {
       try {
+        // 1) Initialize the Tableau Extensions API
         await tableau.extensions.initializeAsync();
-  
-        const dash = tableau.extensions.dashboardContent.dashboard;
-        const user = tableau.extensions.environment.username || 'unknown';
-        const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard'; // your hard-coded viewId
+
+        // 2) Grab dashboard name and user
+        const dash      = tableau.extensions.dashboardContent.dashboard;
         const dashboard = encodeURIComponent(dash.name);
-  
+        const user      = encodeURIComponent(tableau.extensions.environment.username || 'unknown');
+
+        // 3) Build the URL (note the param name "dashboard")
         const url = exportBase
           + '?viewId='   + encodeURIComponent(viewId)
           + '&dashboard=' + dashboard
-          + '&user='      + encodeURIComponent(user);
-  
-        //  ▶️ We DO NOT fetch JSON here: we simply open the URL
-        window.open(
-  exportBase
-  + '?viewId='   + encodeURIComponent(viewId)
-  + '&dashboard=' + encodeURIComponent(dashboardName)
-  + '&user='      + encodeURIComponent(username),
-  '_blank'
-);
+          + '&user='      + user;
+
+        // 4) Open it—no fetch(), no JSON.parse()
+        window.open(url, '_blank');
       }
-      catch(err) {
+      catch (err) {
         console.error('❌ Export & Track failed:', err);
         alert('Export failed—see console for details.');
       }

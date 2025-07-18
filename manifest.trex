@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest manifest-version="0.1"
-          xmlns="http://www.tableau.com/xml/extension_manifest">
+<manifest manifest-version="0.1" xmlns="http://www.tableau.com/xml/extension_manifest">
   <dashboard-extension id="com.easyfairs.exportall.servertracker"
-                       extension-version="1.0.0">
+                       extension-version="1.0.4">
     <default-locale>en_US</default-locale>
     <name resource-id="name"/>
     <description>Server-Backed Full CSV Export + Tracker</description>
@@ -12,9 +11,8 @@
             website="https://gertverbeken-pixel.github.io"/>
     <min-api-version>1.0</min-api-version>
     <source-location>
-      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/index.html</url>
+      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/index.html?v=6</url>
     </source-location>
-    <!-- minimal 1×1 transparent PNG icon -->
     <icon>
       iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=
     </icon>
