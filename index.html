@@ -1,62 +1,209 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8"/>
-  <title>Full CSV Export + Tracker</title>
-  <!-- Tableau Extensions API -->
-  <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
-  <style>
-    body { font-family: sans-serif; text-align: center; padding: 2em; }
-    button {
-      font-size: 1.1em;
-      padding: .8em 1.2em;
-      background-color: #007ac2;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    button:hover { background-color: #005fa3; }
-  </style>
+<meta charset="utf-8"/>
+<title>Full CSV Export + Tracker</title>
+<!-- Tableau Extensions API -->
+<script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
+<style>
+body { font-family: sans-serif; text-align: center; padding: 2em; }
+button {
+font-size: 1.1em;
+padding: .8em 1.2em;
+background-color: #007ac2;
+color: white;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+margin: 0.5em;
+}
+button:hover { background-color: #005fa3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+.status { margin: 1em 0; font-style: italic; color: #666; }
+.worksheet-list { text-align: left; margin: 1em auto; max-width: 400px; }
+.worksheet-item { padding: 0.5em; margin: 0.2em 0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+.worksheet-item:hover { background-color: #f0f0f0; }
+.worksheet-item.selected { background-color: #007ac2; color: white; }
+</style>
 </head>
 <body>
-  <h2>Export Full CSV with Tracker</h2>
-  <button id="exportBtn">Export & Track</button>
+<h2>Export Full CSV with Tracker</h2>
 
-  <script>
-    console.log('Export Tracker v6 loaded');
+<div id="status" class="status">Initializing...</div>
 
-    // Your Apps Script Web App URL:
-    const exportBase = 
-      'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
+<div id="worksheetSelection" style="display: none;">
+  <h3>Select worksheet to export:</h3>
+  <div id="worksheetList" class="worksheet-list"></div>
+</div>
 
-    // Hard‐coded Tableau viewId:
-    const viewId = '60sFeedbackEXPORTTRIAL/60sFeedbackDashboard';
+<button id="exportBtn" disabled>Export & Track</button>
+<button id="debugBtn" disabled>Debug Export</button>
 
-    document.getElementById('exportBtn').addEventListener('click', async function() {
-      try {
-        // 1) Initialize the Tableau Extensions API
-        await tableau.extensions.initializeAsync();
+<script>
+console.log('Export Tracker v7 loaded');
 
-        // 2) Grab dashboard name and user
-        const dash      = tableau.extensions.dashboardContent.dashboard;
-        const dashboard = encodeURIComponent(dash.name);
-        const user      = encodeURIComponent(tableau.extensions.environment.username || 'unknown');
+// Your Apps Script Web App URL:
+const exportBase = 'https://script.google.com/macros/s/AKfycbzPamRroIVfGCrvlFkmM70-OG3cGyLzgNXvepTj7S-nXDLwAgKClmXLZ3DNfwz7QY2s/exec';
 
-        // 3) Build the URL (note the param name "dashboard")
-        const url = exportBase
-          + '?viewId='   + encodeURIComponent(viewId)
-          + '&dashboard=' + dashboard
-          + '&user='      + user;
+// Global variables
+let dashboard = null;
+let selectedWorksheet = null;
+let worksheets = [];
 
-        // 4) Open it—no fetch(), no JSON.parse()
-        window.open(url, '_blank');
-      }
-      catch (err) {
-        console.error('❌ Export & Track failed:', err);
-        alert('Export failed—see console for details.');
-      }
-    });
-  </script>
+// View ID mapping - add more as needed
+const viewIdMap = {
+  '60s Feedback Dashboard': 'bdd0ce23-d382-4180-83e3-e5e440c56431',
+  'Raw Data': '1b7fcfc0-f664-4d12-b670-16bdc69f8507',
+  // Add more mappings as you discover them
+};
+
+// Initialize the extension
+async function initializeExtension() {
+  try {
+    await tableau.extensions.initializeAsync();
+    
+    dashboard = tableau.extensions.dashboardContent.dashboard;
+    worksheets = dashboard.worksheets;
+    
+    document.getElementById('status').textContent = `Connected to dashboard: ${dashboard.name}`;
+    
+    if (worksheets.length === 0) {
+      document.getElementById('status').textContent = 'No worksheets found in this dashboard.';
+      return;
+    }
+    
+    // Show worksheet selection
+    displayWorksheets();
+    
+  } catch (err) {
+    console.error('❌ Initialization failed:', err);
+    document.getElementById('status').textContent = 'Failed to initialize extension.';
+  }
+}
+
+// Display available worksheets
+function displayWorksheets() {
+  const worksheetList = document.getElementById('worksheetList');
+  worksheetList.innerHTML = '';
+  
+  worksheets.forEach((worksheet, index) => {
+    const div = document.createElement('div');
+    div.className = 'worksheet-item';
+    div.textContent = `${worksheet.name}`;
+    div.onclick = () => selectWorksheet(worksheet, div);
+    worksheetList.appendChild(div);
+  });
+  
+  document.getElementById('worksheetSelection').style.display = 'block';
+  
+  // Auto-select if there's a known view
+  const knownWorksheet = worksheets.find(ws => viewIdMap[ws.name]);
+  if (knownWorksheet) {
+    const div = worksheetList.children[worksheets.indexOf(knownWorksheet)];
+    selectWorksheet(knownWorksheet, div);
+  }
+}
+
+// Select a worksheet
+function selectWorksheet(worksheet, element) {
+  selectedWorksheet = worksheet;
+  
+  // Update UI
+  document.querySelectorAll('.worksheet-item').forEach(item => {
+    item.classList.remove('selected');
+  });
+  element.classList.add('selected');
+  
+  // Enable buttons
+  document.getElementById('exportBtn').disabled = false;
+  document.getElementById('debugBtn').disabled = false;
+  
+  // Update status
+  const hasViewId = viewIdMap[worksheet.name];
+  if (hasViewId) {
+    document.getElementById('status').textContent = `Selected: ${worksheet.name} ✓ (View ID found)`;
+  } else {
+    document.getElementById('status').textContent = `Selected: ${worksheet.name} ⚠️ (Will lookup View ID)`;
+  }
+}
+
+// Export function
+async function exportData(debug = false) {
+  if (!selectedWorksheet) {
+    alert('Please select a worksheet first.');
+    return;
+  }
+  
+  try {
+    document.getElementById('status').textContent = 'Preparing export...';
+    
+    // Get user info
+    const user = encodeURIComponent(tableau.extensions.environment.username || 'unknown');
+    const dashboardName = encodeURIComponent(dashboard.name);
+    
+    // Get applied filters
+    let filters = [];
+    try {
+      const worksheetFilters = await selectedWorksheet.getFiltersAsync();
+      filters = worksheetFilters.map(filter => ({
+        fieldName: filter.fieldName,
+        filterType: filter.filterType,
+        appliedValues: filter.appliedValues ? filter.appliedValues.map(v => v.value) : []
+      }));
+    } catch (filterErr) {
+      console.warn('Could not get filters:', filterErr);
+    }
+    
+    // Build URL parameters
+    const params = new URLSearchParams();
+    
+    // Use mapped view ID if available, otherwise use worksheet name for lookup
+    const knownViewId = viewIdMap[selectedWorksheet.name];
+    if (knownViewId) {
+      params.append('viewId', knownViewId);
+    } else {
+      params.append('viewName', selectedWorksheet.name);
+    }
+    
+    params.append('user', user);
+    params.append('dashboard', dashboardName);
+    params.append('maxRows', '10000');
+    params.append('includeAllColumns', 'true');
+    
+    if (filters.length > 0) {
+      params.append('filters', JSON.stringify(filters));
+    }
+    
+    if (debug) {
+      params.append('debug', '1');
+    }
+    
+    const url = `${exportBase}?${params.toString()}`;
+    
+    console.log('Export URL:', url);
+    document.getElementById('status').textContent = 'Opening export...';
+    
+    // Open the export URL
+    window.open(url, '_blank');
+    
+    // Reset status after a delay
+    setTimeout(() => {
+      document.getElementById('status').textContent = `Ready to export: ${selectedWorksheet.name}`;
+    }, 2000);
+    
+  } catch (err) {
+    console.error('❌ Export failed:', err);
+    document.getElementById('status').textContent = 'Export failed - see console for details.';
+    alert('Export failed: ' + err.message);
+  }
+}
+
+// Event listeners
+document.getElementById('exportBtn').addEventListener('click', () => exportData(false));
+document.getElementById('debugBtn').addEventListener('click', () => exportData(true));
+
+// Initialize when page loads
+initializeExtension();
+</script>
 </body>
 </html>

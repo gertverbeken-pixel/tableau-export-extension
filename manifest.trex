@@ -1,25 +1,31 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest manifest-version="0.1" xmlns="http://www.tableau.com/xml/extension_manifest">
   <dashboard-extension id="com.easyfairs.exportall.servertracker"
-                       extension-version="1.0.4">
+                       extension-version="1.1.0">
     <default-locale>en_US</default-locale>
     <name resource-id="name"/>
-    <description>Server-Backed Full CSV Export + Tracker</description>
+    <description resource-id="description"/>
     <author name="Gert Verbeken"
             email="gert.verbeken@easyfairs.com"
             organization="Easyfairs"
             website="https://gertverbeken-pixel.github.io"/>
     <min-api-version>1.0</min-api-version>
     <source-location>
-      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/index.html?v=6</url>
+      <url>https://gertverbeken-pixel.github.io/tableau-export-extension/index.html?v=7</url>
     </source-location>
     <icon>
       iVBORw0KGgoAAAANSUhEUgAAAAEAAAABAQMAAAAl21bKAAAAA1BMVEUAAACnej3aAAAAAXRSTlMAQObYZgAAAApJREFUCNdjYAAAAAIAAeIhvDMAAAAASUVORK5CYII=
     </icon>
+    <permissions>
+      <permission>full data</permission>
+    </permissions>
   </dashboard-extension>
   <resources>
     <resource id="name">
-      <text locale="en_US">Server-Backed Full CSV Export + Tracker</text>
+      <text locale="en_US">Smart CSV Export + Tracker</text>
+    </resource>
+    <resource id="description">
+      <text locale="en_US">Intelligent worksheet selection and server-backed CSV export with automatic filter detection and user tracking</text>
     </resource>
   </resources>
 </manifest>
