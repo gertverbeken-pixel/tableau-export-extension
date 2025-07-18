@@ -157,12 +157,14 @@ async function exportData(debug = false) {
     // Build URL parameters
     const params = new URLSearchParams();
     
-    // Use mapped view ID if available, otherwise use worksheet name for lookup
+    // Use mapped view ID if available, otherwise use DASHBOARD name for lookup
     const knownViewId = viewIdMap[selectedWorksheet.name];
     if (knownViewId) {
       params.append('viewId', knownViewId);
     } else {
-      params.append('viewName', selectedWorksheet.name);
+      // Use dashboard name instead of worksheet name for the lookup
+      params.append('viewName', dashboard.name);
+      console.log('Using dashboard name for lookup:', dashboard.name);
     }
     
     params.append('user', user);
@@ -188,7 +190,7 @@ async function exportData(debug = false) {
     
     // Reset status after a delay
     setTimeout(() => {
-      document.getElementById('status').textContent = `Ready to export: ${selectedWorksheet.name}`;
+      document.getElementById('status').textContent = `Ready to export from dashboard: ${dashboard.name}`;
     }, 2000);
     
   } catch (err) {
