@@ -132,18 +132,71 @@ async function exportData() {
     const encodedUser = encodeURIComponent(user);
     const dashboardName = encodeURIComponent(dashboard.name);
     
-    // Get applied filters for context
+    // Get applied filters for context and processing
     let filters = [];
+    let filterSummary = 'No filters applied';
+    
     if (worksheets.length > 0) {
       try {
-        const worksheetFilters = await worksheets[0].getFiltersAsync();
-        filters = worksheetFilters.map(filter => ({
-          fieldName: filter.fieldName,
-          filterType: filter.filterType,
-          appliedValues: filter.appliedValues ? filter.appliedValues.map(v => v.value) : []
-        }));
+        console.log('🎛️ Collecting filters from all worksheets...');
+        
+        // Collect filters from all worksheets
+        const allFilters = [];
+        for (const worksheet of worksheets) {
+          try {
+            const worksheetFilters = await worksheet.getFiltersAsync();
+            worksheetFilters.forEach(filter => {
+              allFilters.push({
+                worksheet: worksheet.name,
+                fieldName: filter.fieldName,
+                filterType: filter.filterType,
+                appliedValues: filter.appliedValues ? filter.appliedValues.map(v => v.value) : [],
+                isAllSelected: filter.isAllSelected || false
+              });
+            });
+            console.log(`📋 Found ${worksheetFilters.length} filters in worksheet: ${worksheet.name}`);
+          } catch (wsFilterErr) {
+            console.warn(`⚠️ Could not get filters from worksheet ${worksheet.name}:`, wsFilterErr);
+          }
+        }
+        
+        // Filter out empty or "all selected" filters
+        filters = allFilters.filter(filter => 
+          filter.appliedValues && 
+          filter.appliedValues.length > 0 && 
+          !filter.isAllSelected
+        );
+        
+        console.log(`🎯 Found ${filters.length} active filters total`);
+        
+        // Create readable filter summary
+        if (filters.length > 0) {
+          const filterGroups = {};
+          filters.forEach(filter => {
+            const key = filter.fieldName;
+            if (!filterGroups[key]) {
+              filterGroups[key] = [];
+            }
+            filterGroups[key] = filterGroups[key].concat(filter.appliedValues);
+          });
+          
+          const filterDescriptions = Object.keys(filterGroups).map(fieldName => {
+            const values = [...new Set(filterGroups[fieldName])]; // Remove duplicates
+            const cleanFieldName = fieldName.replace(/Current Edition/g, '').trim();
+            
+            if (values.length <= 3) {
+              return `${cleanFieldName}: ${values.join(', ')}`;
+            } else {
+              return `${cleanFieldName}: ${values.slice(0, 3).join(', ')} (+${values.length - 3} more)`;
+            }
+          });
+          
+          filterSummary = filterDescriptions.join(' | ');
+          console.log('📝 Filter summary:', filterSummary);
+        }
+        
       } catch (filterErr) {
-        console.warn('Could not get filters:', filterErr);
+        console.warn('⚠️ Error collecting filters:', filterErr);
       }
     }
     
@@ -159,6 +212,7 @@ async function exportData() {
     
     if (filters.length > 0) {
       params.append('filters', JSON.stringify(filters));
+      params.append('filterSummary', filterSummary);
     }
     
     const url = `${EXPORT_BASE}?${params.toString()}`;
