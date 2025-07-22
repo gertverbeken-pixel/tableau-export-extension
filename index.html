@@ -112,7 +112,16 @@ async function exportData() {
         console.log('✅ Got username from dashboard:', user);
       }
       else {
-        console.warn('⚠️ Could not determine username, using default');
+        console.warn('⚠️ Could not determine username automatically');
+        
+        // Fallback: Ask user to enter their username
+        const promptedUser = prompt('For tracking purposes, please enter your username or email:');
+        if (promptedUser && promptedUser.trim()) {
+          user = promptedUser.trim();
+          console.log('✅ Got username from user prompt:', user);
+        } else {
+          console.warn('⚠️ User cancelled or entered empty username');
+        }
       }
     } catch (userErr) {
       console.warn('⚠️ Error getting username:', userErr);
