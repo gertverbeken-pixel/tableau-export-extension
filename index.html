@@ -54,6 +54,269 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 <button id="debugBtn" disabled>Debug Export</button>
 
 <script>
+console.log('Universal Export Tracker v11 loaded');
+
+// Your Apps Script Web App URL:
+const EXPORT_BASE = 'https://script.google.com/macros/s/AKfycbxfac3a_MC4KoNpj1_00V_Z4X6We_68RypUyxPXblFftaeZZMwjT4dz8DUnX_m2PIF3/exec';
+
+// Global variables
+let dashboard = null;
+let selectedWorksheet = null;
+let worksheets = [];
+
+// Universal view ID discovery - no hardcoded mappings needed!
+const knownViewPatterns = [
+  'Raw Data', 'Data', 'Export', 'Table', 'Detail', 'Full', 'Complete'
+];
+
+// Initialize the extension
+async function initializeExtension() {
+  try {
+    console.log('Starting Tableau extensions initialization...');
+    await tableau.extensions.initializeAsync();
+    console.log('✅ Tableau extensions initialized');
+    
+    dashboard = tableau.extensions.dashboardContent.dashboard;
+    console.log('📊 Dashboard found:', dashboard.name);
+    
+    worksheets = dashboard.worksheets;
+    console.log('📋 Found', worksheets.length, 'worksheets');
+    
+    document.getElementById('status').textContent = `Connected to dashboard: ${dashboard.name}`;
+    
+    if (worksheets.length === 0) {
+      document.getElementById('status').textContent = 'No worksheets found in this dashboard.';
+      return;
+    }
+    
+    // Show export method selection
+    document.getElementById('methodSelection').style.display = 'block';
+    document.getElementById('exportBtn').disabled = false;
+    document.getElementById('debugBtn').disabled = false;
+    
+    // Set up method selection listeners
+    document.querySelectorAll('input[name="exportMethod"]').forEach(radio => {
+      radio.addEventListener('change', handleMethodChange);
+    });
+    
+    // Default to dashboard export
+    handleMethodChange();
+    
+  } catch (err) {
+    console.error('❌ Initialization failed:', err);
+    document.getElementById('status').textContent = 'Failed to initialize extension: ' + err.message;
+  }
+}
+
+// Handle export method selection
+function handleMethodChange() {
+  try {
+    const selectedMethod = document.querySelector('input[name="exportMethod"]:checked').value;
+    
+    if (selectedMethod === 'dashboard') {
+      document.getElementById('worksheetSelection').style.display = 'none';
+      selectedWorksheet = null;
+      document.getElementById('status').textContent = `Ready to export entire dashboard: ${dashboard.name}`;
+    } else {
+      document.getElementById('worksheetSelection').style.display = 'block';
+      displayWorksheets();
+      document.getElementById('status').textContent = 'Select a worksheet to export';
+    }
+  } catch (err) {
+    console.error('Method change error:', err);
+  }
+}
+
+// Display available worksheets
+function displayWorksheets() {
+  try {
+    const worksheetList = document.getElementById('worksheetList');
+    worksheetList.innerHTML = '';
+    
+    worksheets.forEach((worksheet, index) => {
+      const div = document.createElement('div');
+      div.className = 'worksheet-item';
+      div.textContent = `${worksheet.name}`;
+      div.onclick = () => selectWorksheet(worksheet, div);
+      worksheetList.appendChild(div);
+    });
+    
+    // Auto-select if there's a likely data worksheet
+    const likelyWorksheet = worksheets.find(ws => 
+      knownViewPatterns.some(pattern => 
+        ws.name.toLowerCase().includes(pattern.toLowerCase())
+      )
+    );
+    
+    if (likelyWorksheet) {
+      const div = worksheetList.children[worksheets.indexOf(likelyWorksheet)];
+      selectWorksheet(likelyWorksheet, div);
+    }
+  } catch (err) {
+    console.error('Display worksheets error:', err);
+  }
+}
+
+// Select a worksheet
+function selectWorksheet(worksheet, element) {
+  try {
+    selectedWorksheet = worksheet;
+    
+    // Update UI
+    document.querySelectorAll('.worksheet-item').forEach(item => {
+      item.classList.remove('selected');
+    });
+    element.classList.add('selected');
+    
+    // Update status
+    document.getElementById('status').textContent = `Ready to export: ${worksheet.name}`;
+  } catch (err) {
+    console.error('Select worksheet error:', err);
+  }
+}
+
+// Export function with universal discovery
+async function exportData(debug = false) {
+  try {
+    const selectedMethod = document.querySelector('input[name="exportMethod"]:checked').value;
+    
+    if (selectedMethod === 'worksheet' && !selectedWorksheet) {
+      alert('Please select a worksheet first.');
+      return;
+    }
+    
+    document.getElementById('status').textContent = 'Preparing export...';
+    
+    // Get user info
+    const user = encodeURIComponent(tableau.extensions.environment.username || 'unknown');
+    const dashboardName = encodeURIComponent(dashboard.name);
+    
+    // Get applied filters from the selected worksheet or first worksheet
+    const targetWorksheet = selectedWorksheet || worksheets[0];
+    let filters = [];
+    try {
+      const worksheetFilters = await targetWorksheet.getFiltersAsync();
+      filters = worksheetFilters.map(filter => ({
+        fieldName: filter.fieldName,
+        filterType: filter.filterType,
+        appliedValues: filter.appliedValues ? filter.appliedValues.map(v => v.value) : []
+      }));
+    } catch (filterErr) {
+      console.warn('Could not get filters:', filterErr);
+    }
+    
+    // Build URL parameters for UNIVERSAL discovery
+    const params = new URLSearchParams();
+    
+    if (selectedMethod === 'dashboard') {
+      // Use dashboard name for discovery
+      params.append('searchName', dashboard.name);
+      params.append('searchType', 'dashboard');
+    } else {
+      // Use worksheet name for discovery  
+      params.append('searchName', selectedWorksheet.name);
+      params.append('searchType', 'worksheet');
+    }
+    
+    params.append('user', user);
+    params.append('dashboard', dashboardName);
+    params.append('maxRows', '10000');
+    params.append('includeAllColumns', 'true');
+    params.append('universalMode', 'true'); // Flag for dynamic discovery
+    
+    if (filters.length > 0) {
+      params.append('filters', JSON.stringify(filters));
+    }
+    
+    if (debug) {
+      params.append('debug', '1');
+    }
+    
+    const url = `${EXPORT_BASE}?${params.toString()}`;
+    
+    console.log('Universal Export URL:', url);
+    document.getElementById('status').textContent = 'Opening export...';
+    
+    // Open the export URL
+    window.open(url, '_blank');
+    
+    // Reset status after a delay
+    setTimeout(() => {
+      const target = selectedMethod === 'dashboard' ? dashboard.name : selectedWorksheet.name;
+      document.getElementById('status').textContent = `Ready to export: ${target}`;
+    }, 2000);
+    
+  } catch (err) {
+    console.error('❌ Export failed:', err);
+    document.getElementById('status').textContent = 'Export failed - see console for details.';
+    alert('Export failed: ' + err.message);
+  }
+}
+
+// Event listeners
+document.getElementById('exportBtn').addEventListener('click', () => exportData(false));
+document.getElementById('debugBtn').addEventListener('click', () => exportData(true));
+
+// Initialize when page loads
+document.addEventListener('DOMContentLoaded', initializeExtension);
+</script>
+</body>
+</html><!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<title>Universal CSV Export + Tracker</title>
+<!-- Tableau Extensions API -->
+<script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
+<style>
+body { font-family: sans-serif; text-align: center; padding: 2em; }
+button {
+font-size: 1.1em;
+padding: .8em 1.2em;
+background-color: #007ac2;
+color: white;
+border: none;
+border-radius: 4px;
+cursor: pointer;
+margin: 0.5em;
+}
+button:hover { background-color: #005fa3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+.status { margin: 1em 0; font-style: italic; color: #666; }
+.worksheet-list { text-align: left; margin: 1em auto; max-width: 400px; }
+.worksheet-item { padding: 0.5em; margin: 0.2em 0; border: 1px solid #ddd; border-radius: 4px; cursor: pointer; }
+.worksheet-item:hover { background-color: #f0f0f0; }
+.worksheet-item.selected { background-color: #007ac2; color: white; }
+.method-selection { margin: 1em 0; }
+.method-option { margin: 0.5em; }
+</style>
+</head>
+<body>
+<h2>Universal CSV Export + Tracker</h2>
+
+<div id="status" class="status">Initializing...</div>
+
+<div id="methodSelection" class="method-selection" style="display: none;">
+  <h3>Export Method:</h3>
+  <div class="method-option">
+    <input type="radio" id="methodDashboard" name="exportMethod" value="dashboard" checked>
+    <label for="methodDashboard">📊 Export entire dashboard (recommended)</label>
+  </div>
+  <div class="method-option">
+    <input type="radio" id="methodWorksheet" name="exportMethod" value="worksheet">
+    <label for="methodWorksheet">📋 Select specific worksheet</label>
+  </div>
+</div>
+
+<div id="worksheetSelection" style="display: none;">
+  <h3>Select worksheet to export:</h3>
+  <div id="worksheetList" class="worksheet-list"></div>
+</div>
+
+<button id="exportBtn" disabled>Export & Track</button>
+<button id="debugBtn" disabled>Debug Export</button>
+
+<script>
 console.log('Universal Export Tracker v10 loaded');
 
 // Your Apps Script Web App URL:
