@@ -140,6 +140,8 @@ async function exportData(debug = false) {
     // Get user info
     const user = encodeURIComponent(tableau.extensions.environment.username || 'unknown');
     const dashboardName = encodeURIComponent(dashboard.name);
+
+    
     
     // Get applied filters
     let filters = [];
@@ -192,6 +194,11 @@ async function exportData(debug = false) {
     setTimeout(() => {
       document.getElementById('status').textContent = `Ready to export from dashboard: ${dashboard.name}`;
     }, 2000);
+
+        // 🔍 ADD THESE DEBUG LINES:
+        console.log('Selected worksheet name: "' + selectedWorksheet.name + '"');
+    console.log('Available mappings:', Object.keys(viewIdMap));
+    console.log('Found in mapping:', viewIdMap[selectedWorksheet.name]);
     
   } catch (err) {
     console.error('❌ Export failed:', err);
