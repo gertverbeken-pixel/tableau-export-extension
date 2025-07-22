@@ -92,7 +92,35 @@ async function exportData() {
     document.getElementById('status').textContent = 'Preparing export...';
     
     // Get user and dashboard info
-    const user = encodeURIComponent(tableau.extensions.environment.username || 'unknown');
+    let user = 'unknown';
+    
+    // Try multiple methods to get the username
+    try {
+      // Method 1: Extensions environment
+      if (tableau.extensions.environment && tableau.extensions.environment.username) {
+        user = tableau.extensions.environment.username;
+        console.log('✅ Got username from environment:', user);
+      }
+      // Method 2: User context (if available)
+      else if (tableau.extensions.environment && tableau.extensions.environment.user) {
+        user = tableau.extensions.environment.user.username || tableau.extensions.environment.user.name;
+        console.log('✅ Got username from user context:', user);
+      }
+      // Method 3: Try to get from dashboard context
+      else if (dashboard && dashboard.user) {
+        user = dashboard.user.username || dashboard.user.name;
+        console.log('✅ Got username from dashboard:', user);
+      }
+      else {
+        console.warn('⚠️ Could not determine username, using default');
+      }
+    } catch (userErr) {
+      console.warn('⚠️ Error getting username:', userErr);
+    }
+    
+    console.log('🔍 Final username for export:', user);
+    
+    const encodedUser = encodeURIComponent(user);
     const dashboardName = encodeURIComponent(dashboard.name);
     
     // Get applied filters for context
@@ -114,7 +142,7 @@ async function exportData() {
     const params = new URLSearchParams();
     params.append('searchName', dashboard.name);
     params.append('searchType', 'dashboard');
-    params.append('user', user);
+    params.append('user', encodedUser);
     params.append('dashboard', dashboardName);
     params.append('maxRows', '10000');
     params.append('includeAllColumns', 'true');
