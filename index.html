@@ -312,15 +312,40 @@ async function exportData() {
             findUserProps(window.tableau, 'window.tableau');
           }
           
-          // Try to extract a username from found properties
+          // Try to extract a username from found properties (with better validation)
           for (const prop of allProps) {
             if (prop.value && typeof prop.value === 'string' && 
                 prop.value !== 'unknown' && prop.value.trim() !== '' &&
                 !prop.value.toLowerCase().includes('null') &&
                 !prop.value.toLowerCase().includes('undefined')) {
-              user = prop.value.trim();
-              console.log(`✅ Method 8 - Found username from ${prop.path}:`, user);
-              break;
+              
+              const cleanValue = prop.value.trim();
+              
+              // Skip values that are clearly not usernames
+              const skipPatterns = [
+                dashboard.name, // Skip if it's the dashboard name
+                decodeURIComponent(dashboard.name), // Skip URL-decoded dashboard name
+                'dashboard', 'workbook', 'view', 'worksheet', // Skip generic terms
+                'export', 'test', 'raw', 'data' // Skip common dashboard terms
+              ];
+              
+              const isValidUser = !skipPatterns.some(pattern => 
+                cleanValue.toLowerCase().includes(pattern.toLowerCase()) ||
+                pattern.toLowerCase().includes(cleanValue.toLowerCase())
+              );
+              
+              // Additional validation: likely username patterns
+              const looksLikeUser = cleanValue.includes('@') || // Email
+                                   cleanValue.includes('.') || // firstname.lastname
+                                   /^[a-zA-Z][a-zA-Z0-9._-]*$/.test(cleanValue); // Username pattern
+              
+              if (isValidUser && looksLikeUser) {
+                user = cleanValue;
+                console.log(`✅ Method 8 - Found valid username from ${prop.path}:`, user);
+                break;
+              } else {
+                console.log(`⚠️ Skipping invalid user value from ${prop.path}:`, cleanValue);
+              }
             }
           }
           
