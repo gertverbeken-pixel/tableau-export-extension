@@ -79,10 +79,22 @@ async function exportData() {
     }
     
     statusDiv.textContent = `Getting data from "${targetWorksheet.name}"...`;
-    const dataTable = await targetWorksheet.getUnderlyingDataAsync({ includeAllColumns: true });
+    
+    // Use the new non-deprecated API methods
+    const underlyingTables = await targetWorksheet.getUnderlyingTablesAsync();
+    let allData = [];
+    let allColumns = [];
+    
+    // Get data from the first (main) underlying table
+    if (underlyingTables.length > 0) {
+      const mainTable = underlyingTables[0];
+      const tableData = await targetWorksheet.getUnderlyingTableDataAsync(mainTable.id, { includeAllColumns: true });
+      allData = tableData.data;
+      allColumns = tableData.columns;
+    }
     
     const user = await findUsername();
-    const csvData = convertDataTableToCSV(dataTable);
+    const csvData = convertTableDataToCSV(allData, allColumns);
 
     statusDiv.textContent = 'Sending data to backend...';
     
@@ -171,12 +183,12 @@ async function findUsername() {
   return tableau.extensions.environment.username || 'unknown';
 }
 
-function convertDataTableToCSV(dataTable) {
+function convertTableDataToCSV(data, columns) {
   let csv = '';
   // Headers
-  csv += dataTable.columns.map(col => `"${col.fieldName}"`).join(',') + '\r\n';
+  csv += columns.map(col => `"${col.fieldName}"`).join(',') + '\r\n';
   // Rows
-  for (const row of dataTable.data) {
+  for (const row of data) {
     csv += row.map(cell => `"${cell.formattedValue}"`).join(',') + '\r\n';
   }
   return csv;
