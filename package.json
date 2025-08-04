@@ -1,0 +1,37 @@
+{
+  "name": "tableau-multi-format-export-extension",
+  "version": "1.2.0",
+  "description": "Tableau dashboard extension for multi-format data export with tracking",
+  "main": "export.js",
+  "scripts": {
+    "start": "node export.js",
+    "dev": "nodemon export.js",
+    "deploy": "serverless deploy"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "serverless-http": "^3.2.0",
+    "axios": "^1.4.0",
+    "exceljs": "^4.3.0",
+    "pdfkit": "^0.13.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "keywords": [
+    "tableau",
+    "extension",
+    "export",
+    "csv",
+    "excel",
+    "pdf",
+    "json",
+    "tracking"
+  ],
+  "author": "Gert Verbeken <gert.verbeken@easyfairs.com>",
+  "license": "MIT",
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

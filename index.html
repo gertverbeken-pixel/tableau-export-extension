@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8"/>
-<title>Universal CSV Export + Tracker</title>
+<title>Universal Multi-Format Export + Tracker</title>
 <!-- Tableau Extensions API -->
 <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
 <style>
@@ -50,17 +50,51 @@ button:disabled {
   background-color: #f8f9fa;
   border-radius: 4px;
 }
+.format-selection {
+  margin-bottom: 1.5em;
+  text-align: left;
+}
+.format-selection label {
+  display: block;
+  margin-bottom: 0.5em;
+  font-weight: bold;
+  color: #333;
+}
+.format-selection select {
+  width: 100%;
+  padding: 0.8em;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  font-size: 1em;
+  background-color: white;
+  color: #333;
+}
+.format-selection select:focus {
+  outline: none;
+  border-color: #007ac2;
+}
 </style>
 </head>
 <body>
 <div class="container">
-  <h2>CSV Export + Tracker</h2>
+  <h2>Smart Export + Tracker</h2>
+  
+  <div class="format-selection">
+    <label for="formatSelect">Export Format:</label>
+    <select id="formatSelect">
+      <option value="csv">CSV</option>
+      <option value="excel">Excel (.xlsx)</option>
+      <option value="pdf">PDF</option>
+      <option value="json">JSON</option>
+    </select>
+  </div>
+  
   <div id="status" class="status">Initializing...</div>
   <button id="exportBtn" disabled>Export & Track</button>
 </div>
 
 <script>
-console.log('CSV Export Tracker - Final Version loaded');
+console.log('Multi-Format Export Tracker - Version 2.4 loaded');
 
 // Your Apps Script Web App URL
 const EXPORT_BASE = 'https://script.google.com/macros/s/AKfycbwvedyTTLGIS74lSMqimw0h4GNqvr9mMlf8sHOj6uoqLRyPU38hQoT5wzvTDDwkK4FX/exec';
@@ -89,42 +123,229 @@ async function initializeExtension() {
 // Export function
 async function exportData() {
   try {
-    document.getElementById('status').textContent = 'Preparing export...';
+    // Get selected format
+    const selectedFormat = document.getElementById('formatSelect').value;
+    const formatNames = {
+      'csv': 'CSV',
+      'excel': 'Excel',
+      'pdf': 'PDF',
+      'json': 'JSON'
+    };
     
-    // Get user and dashboard info
+    document.getElementById('status').textContent = `Preparing ${formatNames[selectedFormat]} export...`;
+    
+    // Get user and dashboard info with comprehensive detection
     let user = 'unknown';
     
-    // Try multiple methods to get the username
+    // Enhanced user detection with multiple methods
     try {
-      // Method 1: Extensions environment
+      console.log('🔍 Starting comprehensive user detection...');
+      
+      // Debug: Log all available environment properties
+      if (tableau.extensions.environment) {
+        console.log('📊 Environment properties:', Object.keys(tableau.extensions.environment));
+        console.log('📊 Full environment object:', tableau.extensions.environment);
+      }
+      
+      // Method 1: Direct environment username
       if (tableau.extensions.environment && tableau.extensions.environment.username) {
         user = tableau.extensions.environment.username;
-        console.log('✅ Got username from environment:', user);
+        console.log('✅ Method 1 - Got username from environment.username:', user);
       }
-      // Method 2: User context (if available)
+      
+      // Method 2: Environment user object
       else if (tableau.extensions.environment && tableau.extensions.environment.user) {
-        user = tableau.extensions.environment.user.username || tableau.extensions.environment.user.name;
-        console.log('✅ Got username from user context:', user);
-      }
-      // Method 3: Try to get from dashboard context
-      else if (dashboard && dashboard.user) {
-        user = dashboard.user.username || dashboard.user.name;
-        console.log('✅ Got username from dashboard:', user);
-      }
-      else {
-        console.warn('⚠️ Could not determine username automatically');
+        const userObj = tableau.extensions.environment.user;
+        console.log('📊 User object properties:', Object.keys(userObj));
+        console.log('📊 Full user object:', userObj);
         
-        // Fallback: Ask user to enter their username
+        user = userObj.username || userObj.name || userObj.displayName || userObj.email || userObj.id;
+        if (user) {
+          console.log('✅ Method 2 - Got username from environment.user:', user);
+        }
+      }
+      
+      // Method 3: Try to get user from workbook
+      else if (dashboard && dashboard.workbook) {
+        try {
+          const workbook = dashboard.workbook;
+          console.log('📊 Workbook properties:', Object.keys(workbook));
+          
+          if (workbook.user) {
+            const workbookUser = workbook.user;
+            console.log('📊 Workbook user properties:', Object.keys(workbookUser));
+            user = workbookUser.username || workbookUser.name || workbookUser.displayName || workbookUser.email;
+            if (user) {
+              console.log('✅ Method 3 - Got username from workbook.user:', user);
+            }
+          }
+        } catch (workbookErr) {
+          console.warn('⚠️ Could not access workbook user:', workbookErr);
+        }
+      }
+      
+      // Method 4: Try dashboard user (your original approach)
+      else if (dashboard && dashboard.user) {
+        const dashUser = dashboard.user;
+        console.log('📊 Dashboard user properties:', Object.keys(dashUser));
+        user = dashUser.username || dashUser.name || dashUser.displayName || dashUser.email || dashUser.id;
+        if (user) {
+          console.log('✅ Method 4 - Got username from dashboard.user:', user);
+        }
+      }
+      
+      // Method 5: Try to get from site context
+      else {
+        try {
+          // Check if we can get site information
+          if (tableau.extensions.environment && tableau.extensions.environment.site) {
+            const site = tableau.extensions.environment.site;
+            console.log('📊 Site properties:', Object.keys(site));
+            console.log('📊 Site object:', site);
+            
+            if (site.user) {
+              const siteUser = site.user;
+              console.log('📊 Site user properties:', Object.keys(siteUser));
+              user = siteUser.username || siteUser.name || siteUser.displayName || siteUser.email;
+              if (user) {
+                console.log('✅ Method 5 - Got username from site.user:', user);
+              }
+            }
+          }
+        } catch (siteErr) {
+          console.warn('⚠️ Could not access site context:', siteErr);
+        }
+      }
+      
+      // Method 6: Try context parameter (sometimes passed by Tableau)
+      if (user === 'unknown' && tableau.extensions.environment && tableau.extensions.environment.context) {
+        try {
+          const context = tableau.extensions.environment.context;
+          console.log('📊 Context properties:', Object.keys(context));
+          
+          if (context.user) {
+            const contextUser = context.user;
+            user = contextUser.username || contextUser.name || contextUser.displayName || contextUser.email;
+            if (user) {
+              console.log('✅ Method 6 - Got username from context.user:', user);
+            }
+          }
+        } catch (contextErr) {
+          console.warn('⚠️ Could not access context:', contextErr);
+        }
+      }
+      
+      // Method 7: Try to get from browser/session context
+      if (user === 'unknown') {
+        try {
+          // Method 7a: Check for user info in URL parameters or location
+          const urlParams = new URLSearchParams(window.location.search);
+          const urlUser = urlParams.get('user') || urlParams.get('username') || urlParams.get('email');
+          if (urlUser) {
+            user = urlUser;
+            console.log('✅ Method 7a - Got username from URL parameters:', user);
+          }
+          
+          // Method 7b: Try to get from browser session/local storage
+          else if (typeof Storage !== 'undefined') {
+            const sessionUser = sessionStorage.getItem('tableau-user') || 
+                               sessionStorage.getItem('user') || 
+                               localStorage.getItem('tableau-user') ||
+                               localStorage.getItem('user');
+            if (sessionUser) {
+              user = sessionUser;
+              console.log('✅ Method 7b - Got username from browser storage:', user);
+            }
+          }
+          
+          // Method 7c: Try to get from window/global context
+          else if (window.tableau && window.tableau.user) {
+            user = window.tableau.user.username || window.tableau.user.name || window.tableau.user.email;
+            if (user) {
+              console.log('✅ Method 7c - Got username from window.tableau.user:', user);
+            }
+          }
+          
+        } catch (browserErr) {
+          console.warn('⚠️ Browser context search failed:', browserErr);
+        }
+      }
+      
+      // Method 8: Deep object search (last resort before prompting)
+      if (user === 'unknown') {
+        try {
+          // Sometimes user info is available in different locations
+          const allProps = [];
+          
+          // Recursively search for user-like properties
+          function findUserProps(obj, path = '') {
+            if (obj && typeof obj === 'object') {
+              Object.keys(obj).forEach(key => {
+                const fullPath = path ? `${path}.${key}` : key;
+                const value = obj[key];
+                
+                if (key.toLowerCase().includes('user') || 
+                    key.toLowerCase().includes('name') || 
+                    key.toLowerCase().includes('email')) {
+                  allProps.push({ path: fullPath, key, value });
+                  console.log(`🔎 Found user-related property: ${fullPath} =`, value);
+                }
+                
+                // Recursively search (but limit depth to avoid infinite loops)
+                if (typeof value === 'object' && value !== null && path.split('.').length < 3) {
+                  findUserProps(value, fullPath);
+                }
+              });
+            }
+          }
+          
+          // Search in all available tableau objects
+          if (tableau.extensions) {
+            findUserProps(tableau.extensions, 'tableau.extensions');
+          }
+          if (dashboard) {
+            findUserProps(dashboard, 'dashboard');
+          }
+          
+          // Also search window object for any tableau-related user info
+          if (window.tableau) {
+            findUserProps(window.tableau, 'window.tableau');
+          }
+          
+          // Try to extract a username from found properties
+          for (const prop of allProps) {
+            if (prop.value && typeof prop.value === 'string' && 
+                prop.value !== 'unknown' && prop.value.trim() !== '' &&
+                !prop.value.toLowerCase().includes('null') &&
+                !prop.value.toLowerCase().includes('undefined')) {
+              user = prop.value.trim();
+              console.log(`✅ Method 8 - Found username from ${prop.path}:`, user);
+              break;
+            }
+          }
+          
+        } catch (searchErr) {
+          console.warn('⚠️ Deep search failed:', searchErr);
+        }
+      }
+      
+      // Final fallback: Prompt user only if still unknown
+      if (user === 'unknown' || !user || user.trim() === '') {
+        console.warn('⚠️ All automatic methods failed, prompting user');
+        
         const promptedUser = prompt('For tracking purposes, please enter your username or email:');
         if (promptedUser && promptedUser.trim()) {
           user = promptedUser.trim();
           console.log('✅ Got username from user prompt:', user);
         } else {
           console.warn('⚠️ User cancelled or entered empty username');
+          user = 'anonymous-user';
         }
       }
+      
     } catch (userErr) {
-      console.warn('⚠️ Error getting username:', userErr);
+      console.error('⚠️ Error in user detection:', userErr);
+      user = 'error-getting-user';
     }
     
     console.log('🔍 Final username for export:', user);
@@ -209,6 +430,7 @@ async function exportData() {
     params.append('maxRows', '10000');
     params.append('includeAllColumns', 'true');
     params.append('universalMode', 'true');
+    params.append('format', selectedFormat); // Add selected format
     
     if (filters.length > 0) {
       params.append('filters', JSON.stringify(filters));
