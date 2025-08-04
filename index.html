@@ -6,285 +6,159 @@
 <!-- Tableau Extensions API -->
 <script src="https://extensions.tableauusercontent.com/resources/tableau.extensions.1.latest.min.js"></script>
 <style>
-body { 
-  font-family: sans-serif; 
-  text-align: center; 
-  padding: 2em; 
-  background-color: #f8f9fa;
-}
-.container {
-  background: white;
-  padding: 2em;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-  max-width: 400px;
-  margin: 0 auto;
-}
-h2 {
-  color: #007ac2;
-  margin-bottom: 1em;
-}
-button {
-  font-size: 1.1em;
-  padding: 1em 2em;
-  background-color: #007ac2;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  width: 100%;
-  margin-top: 1em;
-}
-button:hover { 
-  background-color: #005fa3; 
-}
-button:disabled { 
-  background-color: #ccc; 
-  cursor: not-allowed; 
-}
-.status { 
-  margin: 1em 0; 
-  font-style: italic; 
-  color: #666; 
-  padding: 0.5em;
-  background-color: #f8f9fa;
-  border-radius: 4px;
-}
-.format-selection {
-  margin-bottom: 1.5em;
-  text-align: left;
-}
-.format-selection label {
-  display: block;
-  margin-bottom: 0.5em;
-  font-weight: bold;
-  color: #333;
-}
-.format-selection select {
-  width: 100%;
-  padding: 0.8em;
-  border: 2px solid #ddd;
-  border-radius: 4px;
-  font-size: 1em;
-  background-color: white;
-  color: #333;
-}
-.format-selection select:focus {
-  outline: none;
-  border-color: #007ac2;
-}
+body { font-family: sans-serif; text-align: center; padding: 2em; background-color: #f8f9fa; }
+.container { background: white; padding: 2em; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
+h2 { color: #007ac2; margin-bottom: 1em; }
+button { font-size: 1.1em; padding: 1em 2em; background-color: #007ac2; color: white; border: none; border-radius: 4px; cursor: pointer; width: 100%; margin-top: 1em; }
+button:hover { background-color: #005fa3; }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+.status { margin: 1em 0; font-style: italic; color: #666; padding: 0.5em; background-color: #f8f9fa; border-radius: 4px; }
+.format-selection { margin-bottom: 1.5em; text-align: left; }
+.format-selection label { display: block; margin-bottom: 0.5em; font-weight: bold; color: #333; }
+.format-selection select { width: 100%; padding: 0.8em; border: 2px solid #ddd; border-radius: 4px; font-size: 1em; background-color: white; color: #333; }
+.format-selection select:focus { outline: none; border-color: #007ac2; }
 </style>
 </head>
 <body>
 <div class="container">
   <h2>Smart Export + Tracker</h2>
-  
   <div class="format-selection">
     <label for="formatSelect">Export Format:</label>
     <select id="formatSelect">
       <option value="csv">CSV</option>
-      <option value="excel">Excel (.xlsx)</option>
+      <option value="excel">Excel (.xls)</option>
       <option value="pdf">PDF</option>
       <option value="json">JSON</option>
     </select>
   </div>
-  
   <div id="status" class="status">Initializing...</div>
   <button id="exportBtn" disabled>Export & Track</button>
 </div>
 
 <script>
-console.log('Multi-Format Export Tracker - Version 2.4 loaded');
+console.log('Universal Export Tracker - Version 3.0 loaded');
 
-// Your Apps Script Web App URL
-const EXPORT_BASE = 'https://script.google.com/macros/s/AKfycbwvedyTTLGIS74lSMqimw0h4GNqvr9mMlf8sHOj6uoqLRyPU38hQoT5wzvTDDwkK4FX/exec';
+const EXPORT_URL = 'https://script.google.com/macros/s/AKfycbwvedyTTLGIS74lSMqimw0h4GNqvr9mMlf8sHOj6uoqLRyPU38hQoT5wzvTDDwkK4FX/exec';
 
-// Global variables
 let dashboard = null;
-let worksheets = [];
 
-// Initialize the extension
 async function initializeExtension() {
   try {
     await tableau.extensions.initializeAsync();
-    
     dashboard = tableau.extensions.dashboardContent.dashboard;
-    worksheets = dashboard.worksheets;
-    
-    document.getElementById('status').textContent = `Ready to export: ${dashboard.name}`;
+    document.getElementById('status').textContent = `Ready to export from: ${dashboard.name}`;
     document.getElementById('exportBtn').disabled = false;
-    
   } catch (err) {
     console.error('Initialization failed:', err);
-    document.getElementById('status').textContent = 'Failed to initialize extension';
+    document.getElementById('status').textContent = 'Error: Could not initialize';
   }
 }
 
-// Export function
 async function exportData() {
+  const exportButton = document.getElementById('exportBtn');
+  const statusDiv = document.getElementById('status');
+  
   try {
-    // Get selected format
+    exportButton.disabled = true;
     const selectedFormat = document.getElementById('formatSelect').value;
-    const formatNames = {
-      'csv': 'CSV',
-      'excel': 'Excel',
-      'pdf': 'PDF',
-      'json': 'JSON'
-    };
-    
-    document.getElementById('status').textContent = `Preparing ${formatNames[selectedFormat]} export...`;
-    
-    // Get user and dashboard info
-    let user = 'unknown';
+    statusDiv.textContent = `Fetching data for ${selectedFormat.toUpperCase()} export...`;
 
-    // --- NEW METHOD: Find user from a dedicated worksheet ---
-    try {
-      console.log('🔍 Attempting to find username from worksheets...');
-      for (const worksheet of worksheets) {
-        // Heuristic: Look for a small, simple worksheet likely to hold a single value.
-        // This avoids fetching data from large, complex vizzes.
-        const colCount = await worksheet.getSummaryColumnsInfoAsync().then(cols => cols.length);
-        
-        if (colCount === 1) {
-          console.log(`✔️ Found candidate worksheet "${worksheet.name}" with 1 column. Fetching data...`);
-          const dataTable = await worksheet.getSummaryDataAsync({ maxRows: 1 });
-          
-          // Check if the data table has exactly one row and one column of data
-          if (dataTable.data.length === 1 && dataTable.columns.length === 1) {
-            const potentialUser = dataTable.data[0][0].value;
-            console.log(`✅ Extracted value from "${worksheet.name}": ${potentialUser}`);
-            
-            // Basic validation to ensure it's a reasonable username
-            if (typeof potentialUser === 'string' && potentialUser.trim() !== '' && potentialUser.trim() !== '%null%') {
-              user = potentialUser.trim();
-              console.log(`🎯 Success! Using username from worksheet "${worksheet.name}": ${user}`);
-              break; // Stop searching once found
-            }
-          }
-        }
-      }
-    } catch (wsUserErr) {
-      console.warn('⚠️ Could not find username from worksheets:', wsUserErr);
-    }
-
-    // --- FALLBACK METHOD: Use environment username if worksheet method fails ---
-    if (user === 'unknown') {
-      console.log('⚠️ Worksheet method failed. Falling back to environment.username.');
-      user = tableau.extensions.environment.username;
-    }
-    
-    console.log('🔍 Final username for export:', user);
-    
-    const encodedUser = encodeURIComponent(user);
-    const dashboardName = encodeURIComponent(dashboard.name);
-    
-    // Get applied filters for context and processing
-    let filters = [];
-    let filterSummary = 'No filters applied';
-    
-    if (worksheets.length > 0) {
-      try {
-        console.log('🎛️ Collecting filters from all worksheets...');
-        
-        // Collect filters from all worksheets
-        const allFilters = [];
-        for (const worksheet of worksheets) {
-          try {
-            const worksheetFilters = await worksheet.getFiltersAsync();
-            worksheetFilters.forEach(filter => {
-              allFilters.push({
-                worksheet: worksheet.name,
-                fieldName: filter.fieldName,
-                filterType: filter.filterType,
-                appliedValues: filter.appliedValues ? filter.appliedValues.map(v => v.value) : [],
-                isAllSelected: filter.isAllSelected || false
-              });
-            });
-            console.log(`📋 Found ${worksheetFilters.length} filters in worksheet: ${worksheet.name}`);
-          } catch (wsFilterErr) {
-            console.warn(`⚠️ Could not get filters from worksheet ${worksheet.name}:`, wsFilterErr);
-          }
-        }
-        
-        // Filter out empty or "all selected" filters
-        filters = allFilters.filter(filter => 
-          filter.appliedValues && 
-          filter.appliedValues.length > 0 && 
-          !filter.isAllSelected
-        );
-        
-        console.log(`🎯 Found ${filters.length} active filters total`);
-        
-        // Create readable filter summary
-        if (filters.length > 0) {
-          const filterGroups = {};
-          filters.forEach(filter => {
-            const key = filter.fieldName;
-            if (!filterGroups[key]) {
-              filterGroups[key] = [];
-            }
-            filterGroups[key] = filterGroups[key].concat(filter.appliedValues);
-          });
-          
-          const filterDescriptions = Object.keys(filterGroups).map(fieldName => {
-            const values = [...new Set(filterGroups[fieldName])]; // Remove duplicates
-            const cleanFieldName = fieldName.replace(/Current Edition/g, '').trim();
-            
-            if (values.length <= 3) {
-              return `${cleanFieldName}: ${values.join(', ')}`;
-            } else {
-              return `${cleanFieldName}: ${values.slice(0, 3).join(', ')} (+${values.length - 3} more)`;
-            }
-          });
-          
-          filterSummary = filterDescriptions.join(' | ');
-          console.log('📝 Filter summary:', filterSummary);
-        }
-        
-      } catch (filterErr) {
-        console.warn('⚠️ Error collecting filters:', filterErr);
+    // Find the main data worksheet (heuristic: the one with the most columns)
+    let targetWorksheet = null;
+    let maxCols = 0;
+    for (const ws of dashboard.worksheets) {
+      const cols = await ws.getSummaryColumnsInfoAsync();
+      if (cols.length > maxCols) {
+        maxCols = cols.length;
+        targetWorksheet = ws;
       }
     }
-    
-    // Build export URL
-    const params = new URLSearchParams();
-    params.append('searchName', dashboard.name);
-    params.append('searchType', 'dashboard');
-    params.append('user', encodedUser);
-    params.append('dashboard', dashboardName);
-    params.append('maxRows', '10000');
-    params.append('includeAllColumns', 'true');
-    params.append('universalMode', 'true');
-    params.append('format', selectedFormat); // Add selected format
-    
-    if (filters.length > 0) {
-      params.append('filters', JSON.stringify(filters));
-      params.append('filterSummary', filterSummary);
+
+    if (!targetWorksheet) {
+      throw new Error('Could not find a suitable worksheet to export.');
     }
     
-    const url = `${EXPORT_BASE}?${params.toString()}`;
+    statusDiv.textContent = `Getting data from "${targetWorksheet.name}"...`;
+    const dataTable = await targetWorksheet.getUnderlyingDataAsync({ includeAllColumns: true });
     
-    document.getElementById('status').textContent = 'Opening export...';
+    const user = await findUsername();
+    const csvData = convertDataTableToCSV(dataTable);
+
+    statusDiv.textContent = 'Sending data to backend...';
     
-    // Open export in new tab
-    window.open(url, '_blank');
+    const response = await fetch(EXPORT_URL, {
+      method: 'POST',
+      mode: 'cors', // Required for cross-origin requests to Google Apps Script
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8', // Apps Script doPost needs text/plain
+      },
+      body: JSON.stringify({
+        csvData: csvData,
+        user: user,
+        dashboard: dashboard.name,
+        format: selectedFormat
+      })
+    });
+
+    if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Backend error: ${errorText}`);
+    }
     
-    // Reset status
-    setTimeout(() => {
-      document.getElementById('status').textContent = `Ready to export: ${dashboard.name}`;
-    }, 2000);
+    statusDiv.textContent = 'Processing download...';
+    
+    // Handle the file download
+    const blob = await response.blob();
+    const filename = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
+    
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    statusDiv.textContent = `Export complete: ${dashboard.name}`;
     
   } catch (err) {
     console.error('Export failed:', err);
-    document.getElementById('status').textContent = 'Export failed';
-    alert('Export failed: ' + err.message);
+    statusDiv.textContent = `Error: ${err.message}`;
+    alert(`Export failed: ${err.message}`);
+  } finally {
+    exportButton.disabled = false;
   }
 }
 
-// Event listener
-document.getElementById('exportBtn').addEventListener('click', exportData);
+async function findUsername() {
+  // Try to get username from a dedicated worksheet first
+  for (const ws of dashboard.worksheets) {
+    const cols = await ws.getSummaryColumnsInfoAsync();
+    if (cols.length === 1) {
+      const data = await ws.getSummaryDataAsync({ maxRows: 1 });
+      if (data.data.length === 1) {
+        const potentialUser = data.data[0][0].value;
+        if (typeof potentialUser === 'string' && potentialUser.trim() !== '' && potentialUser.trim() !== '%null%') {
+          return potentialUser.trim();
+        }
+      }
+    }
+  }
+  // Fallback to environment username
+  return tableau.extensions.environment.username || 'unknown';
+}
 
-// Initialize when page loads
+function convertDataTableToCSV(dataTable) {
+  let csv = '';
+  // Headers
+  csv += dataTable.columns.map(col => `"${col.fieldName}"`).join(',') + '\r\n';
+  // Rows
+  for (const row of dataTable.data) {
+    csv += row.map(cell => `"${cell.formattedValue}"`).join(',') + '\r\n';
+  }
+  return csv;
+}
+
+document.getElementById('exportBtn').addEventListener('click', exportData);
 document.addEventListener('DOMContentLoaded', initializeExtension);
 </script>
 </body>
