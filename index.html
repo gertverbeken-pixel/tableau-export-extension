@@ -109,7 +109,14 @@ async function exportData() {
     
     // Handle the file download
     const blob = await response.blob();
-    const filename = response.headers.get('Content-Disposition').split('filename=')[1].replace(/"/g, '');
+    const formatExtensions = {
+      csv: 'csv',
+      excel: 'xls',
+      pdf: 'pdf',
+      json: 'json'
+    };
+    const extension = formatExtensions[selectedFormat] || 'dat';
+    const filename = `${dashboard.name.replace(/\W+/g, '_')}_${new Date().toISOString().replace(/[:.]/g, '-')}.${extension}`;
     
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
