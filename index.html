@@ -326,7 +326,9 @@ async function exportData() {
                 dashboard.name, // Skip if it's the dashboard name
                 decodeURIComponent(dashboard.name), // Skip URL-decoded dashboard name
                 'dashboard', 'workbook', 'view', 'worksheet', // Skip generic terms
-                'export', 'test', 'raw', 'data' // Skip common dashboard terms
+                'export', 'test', 'raw', 'data', // Skip common dashboard terms
+                'name-changed', 'anonymous', 'user', 'default', // Skip placeholder values
+                'guest', 'temp', 'temporary', 'placeholder' // Skip more placeholder values
               ];
               
               const isValidUser = !skipPatterns.some(pattern => 
@@ -334,17 +336,36 @@ async function exportData() {
                 pattern.toLowerCase().includes(cleanValue.toLowerCase())
               );
               
-              // Additional validation: likely username patterns
-              const looksLikeUser = cleanValue.includes('@') || // Email
-                                   cleanValue.includes('.') || // firstname.lastname
-                                   /^[a-zA-Z][a-zA-Z0-9._-]*$/.test(cleanValue); // Username pattern
+              // Enhanced validation: likely username patterns
+              const hasEmail = cleanValue.includes('@') && cleanValue.includes('.'); // Proper email
+              const hasNamePattern = cleanValue.includes('.') && cleanValue.length > 3; // firstname.lastname
+              const hasValidLength = cleanValue.length >= 3 && cleanValue.length <= 50; // Reasonable length
+              const hasNoSpaces = !cleanValue.includes(' '); // Usernames typically don't have spaces
+              const isNotGeneric = !['name', 'user', 'person', 'admin', 'system'].includes(cleanValue.toLowerCase());
               
-              if (isValidUser && looksLikeUser) {
+              const looksLikeUser = hasValidLength && hasNoSpaces && isNotGeneric && (hasEmail || hasNamePattern);
+              
+              // Extra strict validation for suspicious values
+              const suspiciousPatterns = ['changed', 'modified', 'updated', 'new', 'old'];
+              const isSuspicious = suspiciousPatterns.some(pattern => 
+                cleanValue.toLowerCase().includes(pattern)
+              );
+              
+              if (isValidUser && looksLikeUser && !isSuspicious) {
                 user = cleanValue;
                 console.log(`✅ Method 8 - Found valid username from ${prop.path}:`, user);
                 break;
               } else {
-                console.log(`⚠️ Skipping invalid user value from ${prop.path}:`, cleanValue);
+                console.log(`⚠️ Skipping invalid user value from ${prop.path}:`, cleanValue, {
+                  isValidUser,
+                  looksLikeUser,
+                  isSuspicious,
+                  hasEmail,
+                  hasNamePattern,
+                  hasValidLength,
+                  hasNoSpaces,
+                  isNotGeneric
+                });
               }
             }
           }
