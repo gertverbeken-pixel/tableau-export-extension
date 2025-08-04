@@ -135,7 +135,43 @@ async function exportData() {
     document.getElementById('status').textContent = `Preparing ${formatNames[selectedFormat]} export...`;
     
     // Get user and dashboard info
-    const user = tableau.extensions.environment.username;
+    let user = 'unknown';
+
+    // --- NEW METHOD: Find user from a dedicated worksheet ---
+    try {
+      console.log('🔍 Attempting to find username from worksheets...');
+      for (const worksheet of worksheets) {
+        // Heuristic: Look for a small, simple worksheet likely to hold a single value.
+        // This avoids fetching data from large, complex vizzes.
+        const colCount = await worksheet.getSummaryColumnsInfoAsync().then(cols => cols.length);
+        
+        if (colCount === 1) {
+          console.log(`✔️ Found candidate worksheet "${worksheet.name}" with 1 column. Fetching data...`);
+          const dataTable = await worksheet.getSummaryDataAsync({ maxRows: 1 });
+          
+          // Check if the data table has exactly one row and one column of data
+          if (dataTable.data.length === 1 && dataTable.columns.length === 1) {
+            const potentialUser = dataTable.data[0][0].value;
+            console.log(`✅ Extracted value from "${worksheet.name}": ${potentialUser}`);
+            
+            // Basic validation to ensure it's a reasonable username
+            if (typeof potentialUser === 'string' && potentialUser.trim() !== '' && potentialUser.trim() !== '%null%') {
+              user = potentialUser.trim();
+              console.log(`🎯 Success! Using username from worksheet "${worksheet.name}": ${user}`);
+              break; // Stop searching once found
+            }
+          }
+        }
+      }
+    } catch (wsUserErr) {
+      console.warn('⚠️ Could not find username from worksheets:', wsUserErr);
+    }
+
+    // --- FALLBACK METHOD: Use environment username if worksheet method fails ---
+    if (user === 'unknown') {
+      console.log('⚠️ Worksheet method failed. Falling back to environment.username.');
+      user = tableau.extensions.environment.username;
+    }
     
     console.log('🔍 Final username for export:', user);
     
