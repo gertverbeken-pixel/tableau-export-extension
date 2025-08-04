@@ -375,23 +375,57 @@ async function exportData() {
         }
       }
       
-      // Final fallback: Prompt user only if still unknown
+      // Final fallback: Use Tableau's current user info from session
       if (user === 'unknown' || !user || user.trim() === '') {
-        console.warn('⚠️ All automatic methods failed, prompting user');
+        console.warn('⚠️ All automatic methods failed, trying Tableau session info');
         
-        const promptedUser = prompt('For tracking purposes, please enter your username or email:');
-        if (promptedUser && promptedUser.trim()) {
-          user = promptedUser.trim();
-          console.log('✅ Got username from user prompt:', user);
-        } else {
-          console.warn('⚠️ User cancelled or entered empty username');
-          user = 'anonymous-user';
+        try {
+          // Try to get user from Tableau's current context
+          if (tableau.extensions && tableau.extensions.settings) {
+            const settings = tableau.extensions.settings;
+            console.log('📊 Settings available:', Object.keys(settings));
+            
+            // Sometimes user info is stored in settings
+            const settingsUser = settings.get('user') || settings.get('username');
+            if (settingsUser) {
+              user = settingsUser;
+              console.log('✅ Found username in settings:', user);
+            }
+          }
+          
+          // If still no user, check if we can get it from the dashboard context differently
+          if (user === 'unknown' && dashboard) {
+            console.log('📊 Dashboard object keys:', Object.keys(dashboard));
+            
+            // Try accessing any user-related properties directly
+            if (dashboard.publishedAt) {
+              console.log('📊 Dashboard has publishedAt, checking for owner info');
+            }
+          }
+          
+          // Last resort: Use browser user agent info or create a session-based ID
+          if (user === 'unknown') {
+            // Create a consistent session-based user identifier
+            let sessionUser = sessionStorage.getItem('tableau-session-user');
+            if (!sessionUser) {
+              // Create a unique identifier based on browser and timestamp
+              sessionUser = 'tableau-user-' + Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9);
+              sessionStorage.setItem('tableau-session-user', sessionUser);
+            }
+            user = sessionUser;
+            console.log('✅ Using session-based user ID:', user);
+          }
+          
+        } catch (fallbackErr) {
+          console.warn('⚠️ Fallback user detection failed:', fallbackErr);
+          // Absolute last resort: use a generic identifier
+          user = 'tableau-extension-user';
         }
       }
       
     } catch (userErr) {
       console.error('⚠️ Error in user detection:', userErr);
-      user = 'error-getting-user';
+      user = 'tableau-user-error';
     }
     
     console.log('🔍 Final username for export:', user);
