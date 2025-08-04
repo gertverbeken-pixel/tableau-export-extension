@@ -107,8 +107,8 @@ async function exportData() {
     
     statusDiv.textContent = 'Processing download...';
     
-    // Handle the file download
-    const blob = await response.blob();
+    // Handle the file download based on format
+    const responseText = await response.text();
     const formatExtensions = {
       csv: 'csv',
       excel: 'xls',
@@ -117,6 +117,23 @@ async function exportData() {
     };
     const extension = formatExtensions[selectedFormat] || 'dat';
     const filename = `${dashboard.name.replace(/\W+/g, '_')}_${new Date().toISOString().replace(/[:.]/g, '-')}.${extension}`;
+    
+    let blob;
+    if (selectedFormat === 'pdf') {
+      // PDF is returned as base64, need to decode
+      const binaryString = atob(responseText);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      blob = new Blob([bytes], { type: 'application/pdf' });
+    } else if (selectedFormat === 'excel') {
+      blob = new Blob([responseText], { type: 'application/vnd.ms-excel' });
+    } else if (selectedFormat === 'json') {
+      blob = new Blob([responseText], { type: 'application/json' });
+    } else {
+      blob = new Blob([responseText], { type: 'text/csv' });
+    }
     
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
