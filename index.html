@@ -166,13 +166,26 @@ async function exportData() {
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Backend error: ${errorText}`);
+        try {
+            const errorJson = JSON.parse(errorText);
+            console.error('🚨 Backend Error Logs:');
+            errorJson.logs.forEach(log => console.log(log));
+            throw new Error(`Backend error: ${errorJson.error}`);
+        } catch (e) {
+            throw new Error(`Backend error: ${errorText}`);
+        }
     }
     
     statusDiv.textContent = 'Processing download...';
     
     // Handle the file download based on format
-    const responseText = await response.text();
+    const responseJson = await response.json();
+    
+    console.log('🎉 === BACKEND DEBUG LOGS ===');
+    responseJson.logs.forEach(log => console.log(log));
+    console.log('🎉 === END BACKEND LOGS ===');
+
+    const responseText = responseJson.data;
     const formatExtensions = {
       csv: 'csv',
       excel: 'xls',
