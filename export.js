@@ -7,6 +7,25 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const app = express();
 
+// Version info for verification
+const VERSION = '1.3.0-email-privacy';
+const FEATURE_FLAGS = {
+  emailRandomization: true,
+  lastUpdated: '2025-09-30T17:30:00Z'
+};
+
+console.log(`🚀 Export API starting - Version: ${VERSION}`);
+console.log(`📧 Email Privacy Protection: ${FEATURE_FLAGS.emailRandomization ? 'ENABLED' : 'DISABLED'}`);
+
+// Version check endpoint
+app.get('/version', (req, res) => {
+  res.json({
+    version: VERSION,
+    features: FEATURE_FLAGS,
+    message: 'Email randomization is active - sensitive data will be masked in exports'
+  });
+});
+
 // Helper function to generate random dummy emails
 function generateDummyEmail() {
   const domains = ['example.com', 'test.org', 'demo.net', 'sample.co', 'placeholder.io'];
@@ -213,6 +232,8 @@ app.get('/export', async (req, res) => {
     // 1. Read query params
     const { viewId, dashboard, user, format = 'csv' } = req.query;
     const ts = new Date().toISOString();
+    
+    console.log(`📊 Export request - Version: ${VERSION} | Format: ${format} | User: ${user} | Dashboard: ${dashboard}`);
 
     // 2. Sign in to Tableau REST API
     const signinResp = await axios.post(
