@@ -31,31 +31,61 @@ function generateDummyEmail() {
  * Randomize email data for privacy protection
  */
 function randomizeEmailData(csvData) {
-  console.log('🔍 Starting email randomization process...');
+  console.log('🔍🔍🔍 STARTING EMAIL RANDOMIZATION PROCESS 🔍🔍🔍');
+  console.log('Raw CSV data length:', csvData.length);
+  console.log('First 200 chars of CSV:', csvData.substring(0, 200));
   
   const lines = csvData.split('\n').filter(line => line.trim().length > 0);
-  if (lines.length < 2) return csvData;
+  console.log('Total lines after filtering:', lines.length);
+  
+  if (lines.length < 2) {
+    console.log('❌ Not enough lines for processing');
+    return csvData;
+  }
   
   const headers = parseCSVLine(lines[0]);
-  console.log('Headers found:', headers);
-  
-  // Find email column (case-insensitive)
-  const emailColumnIndex = headers.findIndex(header => {
-    const lowerHeader = header.toLowerCase().trim();
-    return lowerHeader.includes('email') || 
-           lowerHeader.includes('e-mail') || 
-           lowerHeader.includes('mail') ||
-           lowerHeader === 'email' ||
-           lowerHeader === 'e-mail';
+  console.log('🏷️ EXACT HEADERS FOUND:');
+  headers.forEach((header, index) => {
+    console.log(`  [${index}] "${header}" (length: ${header.length})`);
   });
   
+  // Enhanced email column detection with more patterns
+  let emailColumnIndex = -1;
+  let matchedPattern = '';
+  
+  for (let i = 0; i < headers.length; i++) {
+    const header = headers[i];
+    const lowerHeader = header.toLowerCase().trim();
+    
+    // Check various email patterns
+    if (lowerHeader === 'email' || 
+        lowerHeader === 'e-mail' || 
+        lowerHeader === 'mail' ||
+        lowerHeader === 'email address' ||
+        lowerHeader === 'e-mail address' ||
+        lowerHeader === 'emailaddress' ||
+        lowerHeader.includes('email') || 
+        lowerHeader.includes('e-mail') || 
+        lowerHeader.includes('mail')) {
+      emailColumnIndex = i;
+      matchedPattern = lowerHeader;
+      break;
+    }
+  }
+  
   if (emailColumnIndex === -1) {
-    console.log('⚠️ No email column found in headers:', headers);
+    console.log('❌❌❌ NO EMAIL COLUMN FOUND! ❌❌❌');
+    console.log('Searched patterns: email, e-mail, mail, email address, etc.');
+    console.log('Available headers again:');
+    headers.forEach((header, index) => {
+      console.log(`  [${index}] "${header}"`);
+    });
     return csvData;
   }
   
   const emailColumnName = headers[emailColumnIndex];
-  console.log(`✅ Found email column: "${emailColumnName}" at index ${emailColumnIndex}`);
+  console.log(`✅✅✅ FOUND EMAIL COLUMN: "${emailColumnName}" at index ${emailColumnIndex}`);
+  console.log(`🎯 Matched pattern: "${matchedPattern}"`);
   
   const usedEmails = new Set();
   let emailsRandomized = 0;
