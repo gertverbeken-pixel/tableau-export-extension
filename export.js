@@ -42,25 +42,37 @@ function generateDummyEmail() {
 
 // Helper function to randomize email data
 function randomizeEmailData(headers, rows) {
-  // Find email column (case-insensitive)
-  const emailColumnIndex = headers.findIndex(header => 
-    header.toLowerCase().includes('email') || header.toLowerCase().includes('e-mail')
-  );
+  console.log(`🔍 Checking for email columns in headers:`, headers);
+  
+  // Find email column (case-insensitive, more flexible matching)
+  const emailColumnIndex = headers.findIndex(header => {
+    const lowerHeader = header.toLowerCase().trim();
+    return lowerHeader.includes('email') || 
+           lowerHeader.includes('e-mail') || 
+           lowerHeader.includes('mail') ||
+           lowerHeader === 'email' ||
+           lowerHeader === 'e-mail';
+  });
   
   if (emailColumnIndex === -1) {
-    // No email column found, return data unchanged
+    console.log(`⚠️  No email column found in headers: [${headers.join(', ')}]`);
     return { headers, rows };
   }
   
   const emailColumnName = headers[emailColumnIndex];
-  console.log(`Found email column: ${emailColumnName}, randomizing data...`);
+  console.log(`✅ Found email column: "${emailColumnName}" at index ${emailColumnIndex}`);
+  console.log(`📧 Processing ${rows.length} rows for email randomization...`);
   
   // Create a set to ensure unique dummy emails
   const usedEmails = new Set();
   
   // Randomize email data in rows
-  const randomizedRows = rows.map(row => {
-    if (row[emailColumnName] && row[emailColumnName].trim() !== '') {
+  let emailsRandomized = 0;
+  const randomizedRows = rows.map((row, index) => {
+    const originalEmail = row[emailColumnName];
+    console.log(`Row ${index}: Original email value: "${originalEmail}" (type: ${typeof originalEmail})`);
+    
+    if (originalEmail && originalEmail.trim() !== '') {
       let dummyEmail;
       // Generate unique dummy email
       do {
@@ -68,15 +80,21 @@ function randomizeEmailData(headers, rows) {
       } while (usedEmails.has(dummyEmail));
       
       usedEmails.add(dummyEmail);
+      emailsRandomized++;
+      
+      console.log(`Row ${index}: Replacing "${originalEmail}" with "${dummyEmail}"`);
       
       return {
         ...row,
         [emailColumnName]: dummyEmail
       };
+    } else {
+      console.log(`Row ${index}: Skipping email randomization (empty or null value)`);
     }
     return row;
   });
   
+  console.log(`🎯 Email randomization complete: ${emailsRandomized} emails replaced out of ${rows.length} rows`);
   return { headers, rows: randomizedRows };
 }
 
