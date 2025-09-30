@@ -97,7 +97,54 @@ async function exportData() {
     const user = await findUsername();
     const csvData = convertTableDataToCSV(allData, allColumns);
 
+    // 🔍🔍🔍 DETAILED BROWSER CONSOLE DEBUGGING 🔍🔍🔍
+    console.log('🔍 === EXPORT DEBUG INFO ===');
+    console.log('📊 Columns found:', allColumns.map(col => col.fieldName));
+    console.log('📈 Total rows:', allData.length);
+    console.log('👤 User:', user);
+    console.log('📋 Dashboard:', dashboard.name);
+    console.log('📁 Format:', selectedFormat);
+    console.log('📝 CSV Data Length:', csvData.length);
+    console.log('📝 First 300 chars of CSV data:');
+    console.log(csvData.substring(0, 300));
+    console.log('📝 CSV Headers (first line):');
+    const firstLine = csvData.split('\n')[0];
+    console.log(firstLine);
+    console.log('📝 Parsed headers from first line:');
+    const headers = firstLine.split(',').map(h => h.replace(/"/g, ''));
+    headers.forEach((header, index) => {
+      console.log(`  [${index}] "${header}" (length: ${header.length})`);
+    });
+    
+    // Check for email columns in browser console
+    let emailColumnFound = false;
+    let emailColumnIndex = -1;
+    for (let i = 0; i < headers.length; i++) {
+      const header = headers[i];
+      const lowerHeader = header.toLowerCase().trim();
+      console.log(`🔍 Checking header [${i}]: "${header}" -> "${lowerHeader}"`);
+      
+      if (lowerHeader === 'email' || 
+          lowerHeader === 'e-mail' || 
+          lowerHeader === 'mail' ||
+          lowerHeader === 'email address' ||
+          lowerHeader.includes('email') || 
+          lowerHeader.includes('e-mail') || 
+          lowerHeader.includes('mail')) {
+        emailColumnFound = true;
+        emailColumnIndex = i;
+        console.log(`✅ BROWSER: Found email column "${header}" at index ${i}`);
+        break;
+      }
+    }
+    
+    if (!emailColumnFound) {
+      console.log('❌ BROWSER: No email column found in headers!');
+      console.log('❌ Available headers:', headers);
+    }
+
     statusDiv.textContent = 'Sending data to backend with email privacy protection...';
+    console.log('📡 Sending POST request to:', EXPORT_URL);
     
     // FIXED: Use POST request for Google Apps Script with email randomization
     const response = await fetch(EXPORT_URL, {
@@ -113,6 +160,9 @@ async function exportData() {
         format: selectedFormat
       })
     });
+    
+    console.log('📡 Response status:', response.status);
+    console.log('📡 Response OK:', response.ok);
 
     if (!response.ok) {
         const errorText = await response.text();
