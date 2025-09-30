@@ -7,6 +7,60 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const app = express();
 
+// Helper function to generate random dummy emails
+function generateDummyEmail() {
+  const domains = ['example.com', 'test.org', 'demo.net', 'sample.co', 'placeholder.io'];
+  const firstNames = ['john', 'jane', 'alex', 'sarah', 'mike', 'lisa', 'david', 'emma', 'chris', 'anna'];
+  const lastNames = ['smith', 'johnson', 'brown', 'davis', 'miller', 'wilson', 'moore', 'taylor', 'anderson', 'thomas'];
+  
+  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const domain = domains[Math.floor(Math.random() * domains.length)];
+  const randomNum = Math.floor(Math.random() * 999) + 1;
+  
+  return `${firstName}.${lastName}${randomNum}@${domain}`;
+}
+
+// Helper function to randomize email data
+function randomizeEmailData(headers, rows) {
+  // Find email column (case-insensitive)
+  const emailColumnIndex = headers.findIndex(header => 
+    header.toLowerCase().includes('email') || header.toLowerCase().includes('e-mail')
+  );
+  
+  if (emailColumnIndex === -1) {
+    // No email column found, return data unchanged
+    return { headers, rows };
+  }
+  
+  const emailColumnName = headers[emailColumnIndex];
+  console.log(`Found email column: ${emailColumnName}, randomizing data...`);
+  
+  // Create a set to ensure unique dummy emails
+  const usedEmails = new Set();
+  
+  // Randomize email data in rows
+  const randomizedRows = rows.map(row => {
+    if (row[emailColumnName] && row[emailColumnName].trim() !== '') {
+      let dummyEmail;
+      // Generate unique dummy email
+      do {
+        dummyEmail = generateDummyEmail();
+      } while (usedEmails.has(dummyEmail));
+      
+      usedEmails.add(dummyEmail);
+      
+      return {
+        ...row,
+        [emailColumnName]: dummyEmail
+      };
+    }
+    return row;
+  });
+  
+  return { headers, rows: randomizedRows };
+}
+
 // Helper function to parse CSV data
 function parseCSV(csvText) {
   const lines = csvText.trim().split('\n');
@@ -19,7 +73,9 @@ function parseCSV(csvText) {
     });
     return row;
   });
-  return { headers, rows };
+  
+  // Randomize email data for privacy protection
+  return randomizeEmailData(headers, rows);
 }
 
 // Helper function to convert to Excel
@@ -136,6 +192,22 @@ function convertToJSON(csvData) {
   }, null, 2);
 }
 
+// Helper function to convert back to CSV format with randomized data
+function convertToCSV(csvData) {
+  const { headers, rows } = parseCSV(csvData);
+  
+  // Create CSV header row
+  let csvOutput = headers.map(header => `"${header}"`).join(',') + '\n';
+  
+  // Add data rows
+  rows.forEach(row => {
+    const rowValues = headers.map(header => `"${row[header] || ''}"`);
+    csvOutput += rowValues.join(',') + '\n';
+  });
+  
+  return csvOutput;
+}
+
 app.get('/export', async (req, res) => {
   try {
     // 1. Read query params
@@ -214,9 +286,15 @@ app.get('/export', async (req, res) => {
         
       case 'csv':
       default:
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
-        return res.send(csv);
+        try {
+          const randomizedCSV = convertToCSV(csv);
+          res.setHeader('Content-Type', 'text/csv');
+          res.setHeader('Content-Disposition', `attachment; filename="${filename}.csv"`);
+          return res.send(randomizedCSV);
+        } catch (csvErr) {
+          console.error('CSV conversion failed:', csvErr);
+          return res.status(500).send('CSV export failed: ' + csvErr.message);
+        }
     }
 
   } catch (err) {
