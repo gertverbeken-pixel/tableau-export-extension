@@ -94,8 +94,13 @@ function randomizeEmailData(csvData) {
   const processedLines = [lines[0]]; // Keep header unchanged
   
   for (let i = 1; i < lines.length; i++) {
+    console.log(`🔄 Processing row ${i}: "${lines[i]}"`);
     const cells = parseCSVLine(lines[i]);
+    console.log(`🔄 Parsed cells for row ${i}:`, cells);
+    console.log(`🔄 Email cell [${emailColumnIndex}]: "${cells[emailColumnIndex]}"`);
+    
     if (cells[emailColumnIndex] && cells[emailColumnIndex].trim() !== '') {
+      const originalEmail = cells[emailColumnIndex];
       let dummyEmail;
       do {
         dummyEmail = generateDummyEmail();
@@ -105,16 +110,27 @@ function randomizeEmailData(csvData) {
       cells[emailColumnIndex] = dummyEmail;
       emailsRandomized++;
       
-      console.log(`Row ${i}: Email randomized to ${dummyEmail}`);
+      console.log(`✅ Row ${i}: "${originalEmail}" -> "${dummyEmail}"`);
+      console.log(`✅ Updated cells:`, cells);
+    } else {
+      console.log(`⏭️ Row ${i}: No email to replace (empty or null)`);
     }
     
     // Rebuild line with proper CSV escaping
     const escapedCells = cells.map(cell => `"${cell.replace(/"/g, '""')}"`);
-    processedLines.push(escapedCells.join(','));
+    const rebuiltLine = escapedCells.join(',');
+    console.log(`🔄 Rebuilt line ${i}: "${rebuiltLine}"`);
+    processedLines.push(rebuiltLine);
   }
   
   console.log(`🎯 Email randomization complete: ${emailsRandomized} emails replaced`);
-  return processedLines.join('\n');
+  
+  const finalCsv = processedLines.join('\n');
+  console.log('📤 FINAL RANDOMIZED CSV (first 300 chars):');
+  console.log(finalCsv.substring(0, 300));
+  console.log('📤 Final CSV total length:', finalCsv.length);
+  
+  return finalCsv;
 }
 
 /**
