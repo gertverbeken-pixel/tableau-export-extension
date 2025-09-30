@@ -147,7 +147,10 @@ async function exportData() {
     console.log('📡 Sending POST request to:', EXPORT_URL);
     
     // FIXED: Use POST request for Google Apps Script with email randomization
-    const response = await fetch(EXPORT_URL, {
+    const cacheBustUrl = `${EXPORT_URL}?v=${new Date().getTime()}`;
+    console.log('📡 Sending POST request to (cache-busted):', cacheBustUrl);
+    
+    const response = await fetch(cacheBustUrl, {
       method: 'POST',
       mode: 'cors',
       headers: {
