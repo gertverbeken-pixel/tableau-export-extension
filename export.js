@@ -7,16 +7,17 @@ const ExcelJS = require('exceljs');
 const PDFDocument = require('pdfkit');
 const app = express();
 
-// Version info for verification
-const VERSION = '1.3.1-debug-enhanced';
+// Version info for verification - VERY OBVIOUS VERSION UPDATE
+const VERSION = '1.4.0-CACHE-BUSTER-EMAIL-FIX';
 const FEATURE_FLAGS = {
   emailRandomization: true,
   debugLogging: true,
-  lastUpdated: '2025-09-30T18:33:00Z'
+  lastUpdated: '2025-09-30T18:57:00Z'
 };
 
-console.log(`🚀 Export API starting - Version: ${VERSION}`);
-console.log(`📧 Email Privacy Protection: ${FEATURE_FLAGS.emailRandomization ? 'ENABLED' : 'DISABLED'}`);
+console.log(`🎯🎯🎯 NEW FILE LOADING!!! Version: ${VERSION} 🎯🎯🎯`);
+console.log(`🔥🔥🔥 EMAIL PRIVACY PROTECTION: ${FEATURE_FLAGS.emailRandomization ? 'ENABLED' : 'DISABLED'} 🔥🔥🔥`);
+console.log(`⚡⚡⚡ IF YOU SEE THIS MESSAGE, THE NEW EXPORT.JS FILE IS WORKING ⚡⚡⚡`);
 
 // Version check endpoint
 app.get('/version', (req, res) => {
