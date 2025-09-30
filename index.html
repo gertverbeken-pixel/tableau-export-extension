@@ -84,21 +84,12 @@ async function exportData() {
     
     statusDiv.textContent = `Getting data from "${targetWorksheet.name}"...`;
     
-    // Use the new non-deprecated API methods
-    const underlyingTables = await targetWorksheet.getUnderlyingTablesAsync();
-    console.log('Underlying tables found:', underlyingTables.map(t => t.id));
-    let allData = [];
-    let allColumns = [];
-    
-    // Get data from the first (main) underlying table
-    if (underlyingTables.length > 0) {
-      const mainTable = underlyingTables[0];
-      console.log('Fetching data from table:', mainTable.id);
-      const tableData = await targetWorksheet.getUnderlyingTableDataAsync(mainTable.id, { includeAllColumns: true });
-      console.log('Table data received:', tableData);
-      allData = tableData.data;
-      allColumns = tableData.columns;
-    }
+    // Use getSummaryDataAsync as a more robust method
+    console.log('Fetching summary data...');
+    const tableData = await targetWorksheet.getSummaryDataAsync({ includeAllColumns: true });
+    console.log('Summary data received:', tableData);
+    let allData = tableData.data;
+    let allColumns = tableData.columns;
     
     const user = await findUsername();
     const csvData = convertTableDataToCSV(allData, allColumns);
