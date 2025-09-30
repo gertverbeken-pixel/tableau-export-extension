@@ -95,7 +95,10 @@ async function exportData() {
     }
     
     const user = await findUsername();
+    const isProtected = await getProtectedFlag();
     const csvData = convertTableDataToCSV(allData, allColumns);
+    
+    console.log('🔒 Protected flag:', isProtected, '- Randomization will be:', isProtected ? 'SKIPPED' : 'APPLIED');
 
     // 🔍🔍🔍 DETAILED BROWSER CONSOLE DEBUGGING 🔍🔍🔍
     console.log('🔍 === EXPORT DEBUG INFO ===');
@@ -160,7 +163,8 @@ async function exportData() {
         csvData: csvData,
         user: user,
         dashboard: dashboard.name,
-        format: selectedFormat
+        format: selectedFormat,
+        protected: isProtected
       })
     });
     
@@ -249,6 +253,37 @@ async function findUsername() {
   }
   // Fallback to environment username
   return tableau.extensions.environment.username || 'unknown';
+}
+
+async function getProtectedFlag() {
+  // Look for "Sheet 2" worksheet with "Protected" column
+  for (const ws of dashboard.worksheets) {
+    if (ws.name === 'Sheet 2') {
+      console.log('Found Sheet 2, checking for Protected column...');
+      const cols = await ws.getSummaryColumnsInfoAsync();
+      console.log('Sheet 2 columns:', cols.map(c => c.fieldName));
+      
+      const protectedColIndex = cols.findIndex(col => 
+        col.fieldName.toLowerCase().trim() === 'protected'
+      );
+      
+      if (protectedColIndex !== -1) {
+        const data = await ws.getSummaryDataAsync({ maxRows: 1 });
+        if (data.data.length > 0 && data.data[0][protectedColIndex]) {
+          const protectedValue = data.data[0][protectedColIndex].value;
+          console.log('Protected value found:', protectedValue);
+          // Handle various boolean representations
+          if (typeof protectedValue === 'boolean') {
+            return protectedValue;
+          }
+          const strValue = String(protectedValue).toLowerCase().trim();
+          return strValue === 'true' || strValue === '1' || strValue === 'yes';
+        }
+      }
+    }
+  }
+  console.log('Protected column not found, defaulting to false (will randomize)');
+  return false; // Default to randomization if not found
 }
 
 function convertTableDataToCSV(data, columns) {
