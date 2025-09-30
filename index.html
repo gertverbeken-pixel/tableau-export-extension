@@ -36,10 +36,10 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 </div>
 
 <script>
-console.log('🎯🎯🎯 NEW FRONTEND LOADED!!! Version 2.0.0-EMAIL-PRIVACY-FIX 🎯🎯🎯');
+console.log('🎯🎯🎯 EMAIL PRIVACY FRONTEND v3.2 LOADED!!! 🎯🎯🎯');
 
-// UPDATED: Now points to your Node.js backend with email randomization
-const EXPORT_URL = 'https://script.google.com/macros/s/AKfycbwvedyTTLGIS74lSMqimw0h4GNqvr9mMlf8sHOj6uoqLRyPU38hQoT5wzvTDDwkK4FX/exec'; // REPLACE WITH YOUR ACTUAL SERVER URL
+// Points to Google Apps Script with EMAIL RANDOMIZATION v3.2
+const EXPORT_URL = 'https://script.google.com/macros/s/AKfycbwvedyTTLGIS74lSMqimw0h4GNqvr9mMlf8sHOj6uoqLRyPU38hQoT5wzvTDDwkK4FX/exec';
 
 let dashboard = null;
 
@@ -97,23 +97,21 @@ async function exportData() {
     const user = await findUsername();
     const csvData = convertTableDataToCSV(allData, allColumns);
 
-    statusDiv.textContent = 'Sending data to backend...';
+    statusDiv.textContent = 'Sending data to backend with email privacy protection...';
     
-    // NEW: Use GET request matching your Node.js backend API
-    const viewId = targetWorksheet.name; // Using worksheet name as viewId
-    const params = new URLSearchParams({
-      viewId: viewId,
-      dashboard: dashboard.name,
-      user: user,
-      format: selectedFormat
-    });
-    
-    const response = await fetch(`${EXPORT_URL}?${params.toString()}`, {
-      method: 'GET',
+    // FIXED: Use POST request for Google Apps Script with email randomization
+    const response = await fetch(EXPORT_URL, {
+      method: 'POST',
       mode: 'cors',
       headers: {
-        'Accept': '*/*'
-      }
+        'Content-Type': 'text/plain;charset=utf-8',
+      },
+      body: JSON.stringify({
+        csvData: csvData,
+        user: user,
+        dashboard: dashboard.name,
+        format: selectedFormat
+      })
     });
 
     if (!response.ok) {

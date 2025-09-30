@@ -5,11 +5,87 @@
  * Includes a doGet for health checks.
  */
 
-const SCRIPT_VERSION = '3.1-POST';
+const SCRIPT_VERSION = '3.2-EMAIL-PRIVACY-PROTECTION';
 
 // Email notification settings
 const SEND_EMAIL_NOTIFICATIONS = true;
 const NOTIFICATION_EMAIL = 'gert.verbeken@easyfairs.com';
+
+/**
+ * Generate random dummy emails for privacy protection
+ */
+function generateDummyEmail() {
+  const domains = ['example.com', 'test.org', 'demo.net', 'sample.co', 'placeholder.io'];
+  const firstNames = ['john', 'jane', 'alex', 'sarah', 'mike', 'lisa', 'david', 'emma', 'chris', 'anna'];
+  const lastNames = ['smith', 'johnson', 'brown', 'davis', 'miller', 'wilson', 'moore', 'taylor', 'anderson', 'thomas'];
+  
+  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
+  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
+  const domain = domains[Math.floor(Math.random() * domains.length)];
+  const randomNum = Math.floor(Math.random() * 999) + 1;
+  
+  return `${firstName}.${lastName}${randomNum}@${domain}`;
+}
+
+/**
+ * Randomize email data for privacy protection
+ */
+function randomizeEmailData(csvData) {
+  console.log('🔍 Starting email randomization process...');
+  
+  const lines = csvData.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length < 2) return csvData;
+  
+  const headers = parseCSVLine(lines[0]);
+  console.log('Headers found:', headers);
+  
+  // Find email column (case-insensitive)
+  const emailColumnIndex = headers.findIndex(header => {
+    const lowerHeader = header.toLowerCase().trim();
+    return lowerHeader.includes('email') || 
+           lowerHeader.includes('e-mail') || 
+           lowerHeader.includes('mail') ||
+           lowerHeader === 'email' ||
+           lowerHeader === 'e-mail';
+  });
+  
+  if (emailColumnIndex === -1) {
+    console.log('⚠️ No email column found in headers:', headers);
+    return csvData;
+  }
+  
+  const emailColumnName = headers[emailColumnIndex];
+  console.log(`✅ Found email column: "${emailColumnName}" at index ${emailColumnIndex}`);
+  
+  const usedEmails = new Set();
+  let emailsRandomized = 0;
+  
+  // Process data rows (skip header)
+  const processedLines = [lines[0]]; // Keep header unchanged
+  
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCSVLine(lines[i]);
+    if (cells[emailColumnIndex] && cells[emailColumnIndex].trim() !== '') {
+      let dummyEmail;
+      do {
+        dummyEmail = generateDummyEmail();
+      } while (usedEmails.has(dummyEmail));
+      
+      usedEmails.add(dummyEmail);
+      cells[emailColumnIndex] = dummyEmail;
+      emailsRandomized++;
+      
+      console.log(`Row ${i}: Email randomized to ${dummyEmail}`);
+    }
+    
+    // Rebuild line with proper CSV escaping
+    const escapedCells = cells.map(cell => `"${cell.replace(/"/g, '""')}"`);
+    processedLines.push(escapedCells.join(','));
+  }
+  
+  console.log(`🎯 Email randomization complete: ${emailsRandomized} emails replaced`);
+  return processedLines.join('\n');
+}
 
 /**
  * Handles GET requests - provides a status message.
@@ -37,11 +113,14 @@ function doPost(e) {
       throw new Error('No CSV data received.');
     }
 
+    // 🔒 PRIVACY PROTECTION: Randomize email data before processing
+    const emailRandomizedCsv = randomizeEmailData(csvData);
+    
     const ts = new Date().toISOString();
     const trackerCode = 'TRACKER-' + generateUniqueId();
     
     // Append tracker information to the CSV data
-    const finalCsv = csvData + '\n"' + trackerCode + '","' + user + '","' + dashboard + '","' + ts + '"';
+    const finalCsv = emailRandomizedCsv + '\n"' + trackerCode + '","' + user + '","' + dashboard + '","' + ts + '"';
     
     const safeFilename = dashboard.replace(/\W+/g, '_') + '_' + ts.replace(/[:.]/g, '-');
 
