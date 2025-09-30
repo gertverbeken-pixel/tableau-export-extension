@@ -5,7 +5,7 @@
  * Includes a doGet for health checks.
  */
 
-const SCRIPT_VERSION = '3.2-EMAIL-PRIVACY-PROTECTION';
+const SCRIPT_VERSION = '3.3-ULTIMATE-DEBUG-VERSION';
 
 // Email notification settings
 const SEND_EMAIL_NOTIFICATIONS = true;

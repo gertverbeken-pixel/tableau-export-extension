@@ -1,6 +1,6 @@
 {
   "name": "tableau-multi-format-export-extension",
-  "version": "2.0.0-email-privacy-fix",
+  "version": "2.1.0-ultimate-debug-version",
   "description": "Tableau dashboard extension for multi-format data export with tracking",
   "main": "export.js",
   "scripts": {
