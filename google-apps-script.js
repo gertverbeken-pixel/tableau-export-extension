@@ -1,0 +1,278 @@
+/**
+ * Enhanced Google Apps Script for Tableau Multi-Format Export - VERSION 3.1
+ * Deploy as a Web App (Execute as: Me / Anyone with access).
+ * This version receives data via POST, simplifying the backend logic.
+ * Includes a doGet for health checks.
+ */
+
+const SCRIPT_VERSION = '3.1-POST';
+
+// Email notification settings
+const SEND_EMAIL_NOTIFICATIONS = true;
+const NOTIFICATION_EMAIL = 'gert.verbeken@easyfairs.com';
+
+/**
+ * Handles GET requests - provides a status message.
+ */
+function doGet(e) {
+  return ContentService.createTextOutput(`Tableau Export Backend v${SCRIPT_VERSION} is running. Use POST to send data.`)
+    .setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Main function - handles POST requests with data from the extension.
+ */
+function doPost(e) {
+  try {
+    const postData = JSON.parse(e.postData.contents);
+    
+    const {
+      csvData,
+      user = 'unknown',
+      dashboard = 'unknown',
+      format = 'csv'
+    } = postData;
+
+    if (!csvData) {
+      throw new Error('No CSV data received.');
+    }
+
+    const ts = new Date().toISOString();
+    const trackerCode = 'TRACKER-' + generateUniqueId();
+    
+    // Append tracker information to the CSV data
+    const finalCsv = csvData + '\n"' + trackerCode + '","' + user + '","' + dashboard + '","' + ts + '"';
+    
+    const safeFilename = dashboard.replace(/\W+/g, '_') + '_' + ts.replace(/[:.]/g, '-');
+
+    switch (format.toLowerCase()) {
+      case 'excel':
+        return handleExcelExport(finalCsv, safeFilename, trackerCode, user, dashboard);
+      case 'pdf':
+        return handlePDFExport(finalCsv, safeFilename, trackerCode, user, dashboard);
+      case 'json':
+        return handleJSONExport(finalCsv, safeFilename, trackerCode, user, dashboard);
+      default:
+        return handleCSVExport(finalCsv, safeFilename, trackerCode, user, dashboard);
+    }
+    
+  } catch (err) {
+    return ContentService.createTextOutput('Error: ' + err.message).setMimeType(ContentService.MimeType.TEXT);
+  }
+}
+
+/**
+ * Handle CSV export
+ */
+function handleCSVExport(csv, safeFilename, trackerCode, user, dashboard) {
+  if (SEND_EMAIL_NOTIFICATIONS) {
+    sendExportNotification(user, dashboard, csv.split('\n').length - 2, trackerCode, 'CSV');
+  }
+  return ContentService.createTextOutput(csv).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Handle Excel export
+ */
+function handleExcelExport(csv, safeFilename, trackerCode, user, dashboard) {
+  const htmlTable = convertCSVToHTMLTable(csv, dashboard);
+  if (SEND_EMAIL_NOTIFICATIONS) {
+    sendExportNotification(user, dashboard, csv.split('\n').length - 2, trackerCode, 'Excel');
+  }
+  return ContentService.createTextOutput(htmlTable).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Handle PDF export
+ */
+function handlePDFExport(csv, safeFilename, trackerCode, user, dashboard) {
+  const htmlContent = convertCSVToPDF(csv, dashboard);
+  if (SEND_EMAIL_NOTIFICATIONS) {
+    sendExportNotification(user, dashboard, csv.split('\n').length - 2, trackerCode, 'PDF');
+  }
+  const pdfBlob = Utilities.newBlob(htmlContent, 'text/html').getAs('application/pdf');
+  return ContentService.createTextOutput(Utilities.base64Encode(pdfBlob.getBytes())).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Handle JSON export
+ */
+function handleJSONExport(csv, safeFilename, trackerCode, user, dashboard) {
+  const jsonData = convertCSVToJSON(csv, dashboard);
+  if (SEND_EMAIL_NOTIFICATIONS) {
+    sendExportNotification(user, dashboard, csv.split('\n').length - 2, trackerCode, 'JSON');
+  }
+  return ContentService.createTextOutput(jsonData).setMimeType(ContentService.MimeType.TEXT);
+}
+
+/**
+ * Convert CSV to Excel format (SpreadsheetML)
+ */
+function convertCSVToExcel(csv, dashboardName) {
+  const lines = csv.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length === 0) return '';
+  
+  let excelContent = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:html="http://www.w3.org/TR/REC-html40">
+ <DocumentProperties xmlns="urn:schemas-microsoft-com:office:office">
+  <Title>${dashboardName}</Title>
+  <Author>Tableau Extension</Author>
+  <Created>${new Date().toISOString()}</Created>
+ </DocumentProperties>
+ <Styles>
+  <Style ss:ID="Default" ss:Name="Normal"><Alignment ss:Vertical="Bottom"/></Style>
+  <Style ss:ID="Header"><Font ss:Bold="1"/><Interior ss:Color="#E6F3FF" ss:Pattern="Solid"/></Style>
+ </Styles>
+ <Worksheet ss:Name="${dashboardName.replace(/[^\w\s]/g, '').substring(0, 31)}">
+  <Table>`;
+  
+  lines.forEach((line, index) => {
+    const cells = parseCSVLine(line);
+    excelContent += '<Row>\n';
+    cells.forEach(cell => {
+      // Proper XML entity escaping for Excel
+      const cleanCell = cell.replace(/&/g, '&' + 'amp;').replace(/</g, '&' + 'lt;').replace(/>/g, '&' + 'gt;').replace(/"/g, '');
+      const styleID = index === 0 ? 'Header' : 'Default';
+      const dataType = (index > 0 && !isNaN(cleanCell) && cleanCell.trim() !== '') ? 'Number' : 'String';
+      excelContent += `<Cell ss:StyleID="${styleID}"><Data ss:Type="${dataType}">${cleanCell}</Data></Cell>\n`;
+    });
+    excelContent += '</Row>\n';
+  });
+  
+  excelContent += `</Table></Worksheet></Workbook>`;
+  return excelContent;
+}
+
+/**
+ * Convert CSV to PDF-compatible HTML
+ */
+function convertCSVToPDF(csv, dashboardName) {
+  const lines = csv.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length === 0) return '';
+
+  let html = `<!DOCTYPE html><html><head><style>
+    body { font-family: Arial, sans-serif; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    th { background-color: #f0f8ff; }
+  </style></head><body><h1>${dashboardName}</h1><table>`;
+
+  lines.forEach((line, index) => {
+    const cells = parseCSVLine(line);
+    const tag = index === 0 ? 'th' : 'td';
+    html += '<tr>';
+    cells.forEach(cell => {
+      html += `<${tag}>${cell.replace(/&/g, '&' + 'amp;').replace(/</g, '&' + 'lt;').replace(/>/g, '&' + 'gt;')}</${tag}>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</table></body></html>';
+  return html;
+}
+
+/**
+ * Convert CSV to JSON
+ */
+function convertCSVToJSON(csv) {
+  const lines = csv.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length < 2) return '[]';
+  
+  const headers = parseCSVLine(lines[0]);
+  const rows = lines.slice(1).map(line => {
+    const row = {};
+    const cells = parseCSVLine(line);
+    headers.forEach((header, index) => {
+      row[header] = cells[index] || '';
+    });
+    return row;
+  });
+  
+  return JSON.stringify(rows, null, 2);
+}
+
+/**
+ * Send email notification
+ */
+function sendExportNotification(user, dashboard, rowCount, trackerCode, format) {
+  if (!SEND_EMAIL_NOTIFICATIONS) return;
+  const subject = `📊 Tableau ${format} Export: ${dashboard} [${trackerCode}]`;
+  const body = `Export Details:
+• Dashboard: ${dashboard}
+• User: ${user}
+• Format: ${format}
+• Timestamp: ${new Date().toLocaleString('en-GB', { timeZone: 'Europe/Brussels' })}
+• Rows: ${rowCount}
+• Tracker: ${trackerCode}`;
+  MailApp.sendEmail(NOTIFICATION_EMAIL, subject, body);
+}
+
+/**
+ * Generate unique tracker ID
+ */
+function generateUniqueId() {
+  return (Date.now().toString(36) + '-' + Math.random().toString(36).substr(2, 9)).toUpperCase();
+}
+
+/**
+ * Convert CSV to HTML table for Excel import with formatting
+ */
+function convertCSVToHTMLTable(csv, dashboardName) {
+  const lines = csv.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length === 0) return '';
+
+  let html = `<html>
+<head>
+<meta charset="utf-8">
+<style>
+table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
+th { background-color: #4472C4; color: white; font-weight: bold; border: 1px solid #2F5597; padding: 8px; text-align: left; }
+td { border: 1px solid #D0D7DE; padding: 6px; }
+tr:nth-child(even) { background-color: #F8F9FA; }
+tr:nth-child(odd) { background-color: #FFFFFF; }
+</style>
+</head>
+<body>
+<table>`;
+
+  lines.forEach((line, index) => {
+    const cells = parseCSVLine(line);
+    const tag = index === 0 ? 'th' : 'td';
+    html += '<tr>';
+    cells.forEach(cell => {
+      const cleanCell = cell.replace(/&/g, '&' + 'amp;').replace(/</g, '&' + 'lt;').replace(/>/g, '&' + 'gt;');
+      html += `<${tag}>${cleanCell}</${tag}>`;
+    });
+    html += '</tr>';
+  });
+
+  html += '</table></body></html>';
+  return html;
+}
+
+/**
+ * Parse a single line of CSV
+ */
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      result.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  result.push(current);
+  return result;
+}

@@ -36,9 +36,10 @@ button:disabled { background-color: #ccc; cursor: not-allowed; }
 </div>
 
 <script>
-console.log('Universal Export Tracker - Version 3.0 loaded');
+console.log('🎯🎯🎯 NEW FRONTEND LOADED!!! Version 2.0.0-EMAIL-PRIVACY-FIX 🎯🎯🎯');
 
-const EXPORT_URL = 'https://script.google.com/macros/s/AKfycbyc3XLDA-OC4jar7o20d99-y82gb-y5b80DYCX6I9_OYU3cfSIs9S477hxuEqPWDT5u/exec';
+// UPDATED: Now points to your Node.js backend with email randomization
+const EXPORT_URL = 'https://script.google.com/macros/s/AKfycbwvedyTTLGIS74lSMqimw0h4GNqvr9mMlf8sHOj6uoqLRyPU38hQoT5wzvTDDwkK4FX/exec'; // REPLACE WITH YOUR ACTUAL SERVER URL
 
 let dashboard = null;
 
@@ -98,18 +99,21 @@ async function exportData() {
 
     statusDiv.textContent = 'Sending data to backend...';
     
-    const response = await fetch(EXPORT_URL, {
-      method: 'POST',
-      mode: 'cors', // Required for cross-origin requests to Google Apps Script
+    // NEW: Use GET request matching your Node.js backend API
+    const viewId = targetWorksheet.name; // Using worksheet name as viewId
+    const params = new URLSearchParams({
+      viewId: viewId,
+      dashboard: dashboard.name,
+      user: user,
+      format: selectedFormat
+    });
+    
+    const response = await fetch(`${EXPORT_URL}?${params.toString()}`, {
+      method: 'GET',
+      mode: 'cors',
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8', // Apps Script doPost needs text/plain
-      },
-      body: JSON.stringify({
-        csvData: csvData,
-        user: user,
-        dashboard: dashboard.name,
-        format: selectedFormat
-      })
+        'Accept': '*/*'
+      }
     });
 
     if (!response.ok) {
