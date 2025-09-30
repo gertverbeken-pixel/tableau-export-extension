@@ -8,10 +8,11 @@ const PDFDocument = require('pdfkit');
 const app = express();
 
 // Version info for verification
-const VERSION = '1.3.0-email-privacy';
+const VERSION = '1.3.1-debug-enhanced';
 const FEATURE_FLAGS = {
   emailRandomization: true,
-  lastUpdated: '2025-09-30T17:30:00Z'
+  debugLogging: true,
+  lastUpdated: '2025-09-30T18:33:00Z'
 };
 
 console.log(`🚀 Export API starting - Version: ${VERSION}`);
