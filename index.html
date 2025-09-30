@@ -249,7 +249,28 @@ async function exportData() {
 }
 
 async function findUsername() {
-  // Try to get username from a dedicated worksheet first
+  // First try to get username from Sheet 2
+  for (const ws of dashboard.worksheets) {
+    if (ws.name === 'Sheet 2') {
+      const cols = await ws.getSummaryColumnsInfoAsync();
+      const usernameColIndex = cols.findIndex(col => 
+        col.fieldName.toLowerCase().trim() === 'username'
+      );
+      
+      if (usernameColIndex !== -1) {
+        const data = await ws.getSummaryDataAsync({ maxRows: 1 });
+        if (data.data.length > 0 && data.data[0][usernameColIndex]) {
+          const username = data.data[0][usernameColIndex].value;
+          if (typeof username === 'string' && username.trim() !== '' && username.trim() !== '%null%') {
+            console.log('Username found in Sheet 2:', username);
+            return username.trim();
+          }
+        }
+      }
+    }
+  }
+  
+  // Fallback: Try to get username from a dedicated worksheet with single column
   for (const ws of dashboard.worksheets) {
     const cols = await ws.getSummaryColumnsInfoAsync();
     if (cols.length === 1) {
@@ -262,7 +283,8 @@ async function findUsername() {
       }
     }
   }
-  // Fallback to environment username
+  
+  // Final fallback to environment username
   return tableau.extensions.environment.username || 'unknown';
 }
 
