@@ -65,12 +65,10 @@ async function exportData() {
     statusDiv.textContent = `Fetching data for ${selectedFormat.toUpperCase()} export...`;
 
     // Find the main data worksheet (heuristic: the one with the most columns)
-    console.log('Worksheets found:', dashboard.worksheets.map(w => w.name));
     let targetWorksheet = null;
     let maxCols = 0;
     for (const ws of dashboard.worksheets) {
       const cols = await ws.getSummaryColumnsInfoAsync();
-      console.log(`Worksheet "${ws.name}" has ${cols.length} columns.`);
       if (cols.length > maxCols) {
         maxCols = cols.length;
         targetWorksheet = ws;
@@ -80,30 +78,18 @@ async function exportData() {
     if (!targetWorksheet) {
       throw new Error('Could not find a suitable worksheet to export.');
     }
-    console.log('Target worksheet selected:', targetWorksheet.name);
     
     statusDiv.textContent = `Getting data from "${targetWorksheet.name}"...`;
     
-    // Use the new non-deprecated API methods - HYBRID APPROACH
+    // Use the new non-deprecated API methods
+    const underlyingTables = await targetWorksheet.getUnderlyingTablesAsync();
     let allData = [];
     let allColumns = [];
     
-    const underlyingTables = await targetWorksheet.getUnderlyingTablesAsync();
-    console.log('Underlying tables found:', underlyingTables.map(t => t.id));
-    
+    // Get data from the first (main) underlying table
     if (underlyingTables.length > 0) {
-      console.log('Using getUnderlyingTableDataAsync method.');
       const mainTable = underlyingTables[0];
-      console.log('Fetching data from table:', mainTable.id);
       const tableData = await targetWorksheet.getUnderlyingTableDataAsync(mainTable.id, { includeAllColumns: true });
-      console.log('Table data received:', tableData);
-      allData = tableData.data;
-      allColumns = tableData.columns;
-    } else {
-      console.warn('No underlying tables found. Falling back to getSummaryDataAsync.');
-      console.log('Fetching summary data...');
-      const tableData = await targetWorksheet.getSummaryDataAsync({ includeAllColumns: true });
-      console.log('Summary data received:', tableData);
       allData = tableData.data;
       allColumns = tableData.columns;
     }
