@@ -5,7 +5,7 @@
  * Includes a doGet for health checks.
  */
 
-const SCRIPT_VERSION = '3.3-ULTIMATE-DEBUG-VERSION';
+const SCRIPT_VERSION = '3.4';
 
 // Email notification settings
 const SEND_EMAIL_NOTIFICATIONS = true;
@@ -31,22 +31,22 @@ function generateDummyEmail() {
  * Randomize email data for privacy protection
  */
 function randomizeEmailData(csvData) {
-  console.log('🔍🔍🔍 STARTING EMAIL RANDOMIZATION PROCESS 🔍🔍🔍');
-  console.log('Raw CSV data length:', csvData.length);
-  console.log('First 200 chars of CSV:', csvData.substring(0, 200));
+  Logger.log('🔍🔍🔍 STARTING EMAIL RANDOMIZATION PROCESS 🔍🔍🔍');
+  Logger.log(`Raw CSV data length: ${csvData.length}`);
+  Logger.log(`First 200 chars of CSV: ${csvData.substring(0, 200)}`);
   
   const lines = csvData.split('\n').filter(line => line.trim().length > 0);
-  console.log('Total lines after filtering:', lines.length);
+  Logger.log(`Total lines after filtering: ${lines.length}`);
   
   if (lines.length < 2) {
-    console.log('❌ Not enough lines for processing');
+    Logger.log('❌ Not enough lines for processing');
     return csvData;
   }
   
   const headers = parseCSVLine(lines[0]);
-  console.log('🏷️ EXACT HEADERS FOUND:');
+  Logger.log('🏷️ EXACT HEADERS FOUND:');
   headers.forEach((header, index) => {
-    console.log(`  [${index}] "${header}" (length: ${header.length})`);
+    Logger.log(`  [${index}] "${header}" (length: ${header.length})`);
   });
   
   // Enhanced email column detection with more patterns
@@ -74,18 +74,18 @@ function randomizeEmailData(csvData) {
   }
   
   if (emailColumnIndex === -1) {
-    console.log('❌❌❌ NO EMAIL COLUMN FOUND! ❌❌❌');
-    console.log('Searched patterns: email, e-mail, mail, email address, etc.');
-    console.log('Available headers again:');
+    Logger.log('❌❌❌ NO EMAIL COLUMN FOUND! ❌❌❌');
+    Logger.log('Searched patterns: email, e-mail, mail, email address, etc.');
+    Logger.log('Available headers again:');
     headers.forEach((header, index) => {
-      console.log(`  [${index}] "${header}"`);
+      Logger.log(`  [${index}] "${header}"`);
     });
     return csvData;
   }
   
   const emailColumnName = headers[emailColumnIndex];
-  console.log(`✅✅✅ FOUND EMAIL COLUMN: "${emailColumnName}" at index ${emailColumnIndex}`);
-  console.log(`🎯 Matched pattern: "${matchedPattern}"`);
+  Logger.log(`✅✅✅ FOUND EMAIL COLUMN: "${emailColumnName}" at index ${emailColumnIndex}`);
+  Logger.log(`🎯 Matched pattern: "${matchedPattern}"`);
   
   const usedEmails = new Set();
   let emailsRandomized = 0;
@@ -93,11 +93,11 @@ function randomizeEmailData(csvData) {
   // Process data rows (skip header)
   const processedLines = [lines[0]]; // Keep header unchanged
   
-  for (let i = 1; i < lines.length; i++) {
-    console.log(`🔄 Processing row ${i}: "${lines[i]}"`);
+  for (let i = 1; i < lines.length && i <= 5; i++) { // Limit to first 5 rows for debug
+    Logger.log(`🔄 Processing row ${i}: "${lines[i].substring(0, 100)}..."`);
     const cells = parseCSVLine(lines[i]);
-    console.log(`🔄 Parsed cells for row ${i}:`, cells);
-    console.log(`🔄 Email cell [${emailColumnIndex}]: "${cells[emailColumnIndex]}"`);
+    Logger.log(`🔄 Parsed ${cells.length} cells for row ${i}`);
+    Logger.log(`🔄 Email cell [${emailColumnIndex}]: "${cells[emailColumnIndex]}"`);
     
     if (cells[emailColumnIndex] && cells[emailColumnIndex].trim() !== '') {
       const originalEmail = cells[emailColumnIndex];
@@ -110,25 +110,42 @@ function randomizeEmailData(csvData) {
       cells[emailColumnIndex] = dummyEmail;
       emailsRandomized++;
       
-      console.log(`✅ Row ${i}: "${originalEmail}" -> "${dummyEmail}"`);
-      console.log(`✅ Updated cells:`, cells);
+      Logger.log(`✅ Row ${i}: "${originalEmail}" -> "${dummyEmail}"`);
     } else {
-      console.log(`⏭️ Row ${i}: No email to replace (empty or null)`);
+      Logger.log(`⏭️ Row ${i}: No email to replace (empty or null)`);
     }
     
     // Rebuild line with proper CSV escaping
     const escapedCells = cells.map(cell => `"${cell.replace(/"/g, '""')}"`);
     const rebuiltLine = escapedCells.join(',');
-    console.log(`🔄 Rebuilt line ${i}: "${rebuiltLine}"`);
+    Logger.log(`🔄 Rebuilt line ${i}: "${rebuiltLine.substring(0, 100)}..."`);
     processedLines.push(rebuiltLine);
   }
   
-  console.log(`🎯 Email randomization complete: ${emailsRandomized} emails replaced`);
+  // Process remaining rows without detailed logging
+  for (let i = 6; i < lines.length; i++) {
+    const cells = parseCSVLine(lines[i]);
+    if (cells[emailColumnIndex] && cells[emailColumnIndex].trim() !== '') {
+      const originalEmail = cells[emailColumnIndex];
+      let dummyEmail;
+      do {
+        dummyEmail = generateDummyEmail();
+      } while (usedEmails.has(dummyEmail));
+      
+      usedEmails.add(dummyEmail);
+      cells[emailColumnIndex] = dummyEmail;
+      emailsRandomized++;
+    }
+    
+    const escapedCells = cells.map(cell => `"${cell.replace(/"/g, '""')}"`);
+    processedLines.push(escapedCells.join(','));
+  }
+  
+  Logger.log(`🎯 Email randomization complete: ${emailsRandomized} emails replaced out of ${lines.length - 1} total rows`);
   
   const finalCsv = processedLines.join('\n');
-  console.log('📤 FINAL RANDOMIZED CSV (first 300 chars):');
-  console.log(finalCsv.substring(0, 300));
-  console.log('📤 Final CSV total length:', finalCsv.length);
+  Logger.log(`📤 Final CSV total length: ${finalCsv.length}`);
+  Logger.log(`📤 First 200 chars of final CSV: ${finalCsv.substring(0, 200)}`);
   
   return finalCsv;
 }
@@ -146,6 +163,8 @@ function doGet(e) {
  */
 function doPost(e) {
   try {
+    Logger.log('=== REQUEST START ===');
+    
     const postData = JSON.parse(e.postData.contents);
     
     const {
@@ -154,6 +173,9 @@ function doPost(e) {
       dashboard = 'unknown',
       format = 'csv'
     } = postData;
+
+    Logger.log(`Request received: format=${format}, user=${user}, dashboard=${dashboard}`);
+    Logger.log(`CSV data length: ${csvData ? csvData.length : 0}`);
 
     if (!csvData) {
       throw new Error('No CSV data received.');
@@ -177,11 +199,14 @@ function doPost(e) {
         return handlePDFExport(finalCsv, safeFilename, trackerCode, user, dashboard);
       case 'json':
         return handleJSONExport(finalCsv, safeFilename, trackerCode, user, dashboard);
+      case 'csv':
       default:
         return handleCSVExport(finalCsv, safeFilename, trackerCode, user, dashboard);
     }
     
   } catch (err) {
+    Logger.log(`ERROR: ${err.message}`);
+    Logger.log(err.stack);
     return ContentService.createTextOutput('Error: ' + err.message).setMimeType(ContentService.MimeType.TEXT);
   }
 }
